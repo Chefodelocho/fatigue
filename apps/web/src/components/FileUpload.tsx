@@ -1,7 +1,8 @@
 /**
  * File upload component with drag & drop support for FEM CSV files.
  *
- * Allows users to upload two CSV files: one base case and one loading case.
+ * Allows users to upload two CSV files (base case + loading case) and an
+ * optional coordinates CSV file for 3D visualization.
  * Files are read client-side and sent to the API for processing.
  *
  * @module components/FileUpload
@@ -16,10 +17,11 @@ import { useCallback, useRef, useState } from 'react';
 export interface UploadedFiles {
   readonly base: File;
   readonly load: File;
+  readonly coordinates?: File;
 }
 
 interface FileUploadProps {
-  /** Called when both files are selected */
+  /** Called when both required files are selected */
   onFilesSelected: (files: UploadedFiles) => void;
   /** Currently selected files */
   files: UploadedFiles | null;
@@ -32,8 +34,24 @@ interface FileUploadProps {
 export default function FileUpload({ onFilesSelected, files, disabled }: FileUploadProps) {
   const baseInputRef = useRef<HTMLInputElement>(null);
   const loadInputRef = useRef<HTMLInputElement>(null);
+  const coordsInputRef = useRef<HTMLInputElement>(null);
   const [dragOverBase, setDragOverBase] = useState(false);
   const [dragOverLoad, setDragOverLoad] = useState(false);
+  const [dragOverCoords, setDragOverCoords] = useState(false);
+
+  /**
+   * Build UploadedFiles object respecting exactOptionalPropertyTypes.
+   * Only includes `coordinates` if a valid File is provided.
+   */
+  const buildFiles = useCallback(
+    (base: File, load: File, coords: File | undefined): UploadedFiles => {
+      if (coords) {
+        return { base, load, coordinates: coords };
+      }
+      return { base, load };
+    },
+    [],
+  );
 
   const handleFileDrop = useCallback(
     (type: 'base' | 'load', droppedFile: File | undefined) => {
@@ -48,7 +66,7 @@ export default function FileUpload({ onFilesSelected, files, disabled }: FileUpl
       if (type === 'base') {
         const load = files?.load;
         if (load) {
-          onFilesSelected({ base: droppedFile, load });
+          onFilesSelected(buildFiles(droppedFile, load, files?.coordinates));
         } else {
           // Store base temporarily — we need both files
           onFilesSelected({ base: droppedFile, load: droppedFile }); // temporary, will be overwritten
@@ -56,11 +74,25 @@ export default function FileUpload({ onFilesSelected, files, disabled }: FileUpl
       } else {
         const base = files?.base;
         if (base) {
-          onFilesSelected({ base, load: droppedFile });
+          onFilesSelected(buildFiles(base, droppedFile, files?.coordinates));
         }
       }
     },
-    [disabled, files, onFilesSelected],
+    [disabled, files, onFilesSelected, buildFiles],
+  );
+
+  const handleCoordsDrop = useCallback(
+    (droppedFile: File | undefined) => {
+      if (!droppedFile || disabled || !files?.base || !files?.load) return;
+
+      if (!droppedFile.name.toLowerCase().endsWith('.csv')) {
+        alert('Please upload a CSV file.');
+        return;
+      }
+
+      onFilesSelected(buildFiles(files.base, files.load, droppedFile));
+    },
+    [disabled, files, onFilesSelected, buildFiles],
   );
 
   const handleBaseChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,7 +100,7 @@ export default function FileUpload({ onFilesSelected, files, disabled }: FileUpl
     if (file) {
       const load = files?.load;
       if (load) {
-        onFilesSelected({ base: file, load });
+        onFilesSelected(buildFiles(file, load, files?.coordinates));
       } else {
         onFilesSelected({ base: file, load: file });
       }
@@ -78,7 +110,14 @@ export default function FileUpload({ onFilesSelected, files, disabled }: FileUpl
   const handleLoadChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && files?.base) {
-      onFilesSelected({ base: files.base, load: file });
+      onFilesSelected(buildFiles(files.base, file, files?.coordinates));
+    }
+  };
+
+  const handleCoordsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && files?.base && files?.load) {
+      onFilesSelected({ base: files.base, load: files.load, coordinates: file });
     }
   };
 
@@ -150,6 +189,51 @@ export default function FileUpload({ onFilesSelected, files, disabled }: FileUpl
           disabled={disabled || !files?.base}
           className="hidden"
         />
+      </div>
+
+      {/* Optional Coordinates Upload */}
+      <div className="mt-4 border-t border-gray-100 pt-4">
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
+          Optional — 3D Visualization
+        </h3>
+        <p className="mb-3 text-xs text-gray-400">
+          Upload node coordinates (X, Y, Z) to visualize the spatial distribution of safety factors
+          in a 3D scatter plot. File should contain columns: Node, X (mm), Y (mm), Z (mm).
+        </p>
+        <DropZone
+          label="Node Coordinates CSV (Optional)"
+          file={files?.coordinates}
+          dragOver={dragOverCoords}
+          disabled={disabled || !files?.base || !files?.load}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOverCoords(true);
+          }}
+          onDragLeave={() => setDragOverCoords(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOverCoords(false);
+            handleCoordsDrop(e.dataTransfer.files[0]);
+          }}
+          onClick={() => {
+            if (files?.base && files?.load) {
+              coordsInputRef.current?.click();
+            }
+          }}
+        />
+        <input
+          ref={coordsInputRef}
+          type="file"
+          accept=".csv"
+          onChange={handleCoordsChange}
+          disabled={disabled || !files?.base || !files?.load}
+          className="hidden"
+        />
+        {files?.coordinates && (
+          <p className="mt-2 text-xs text-green-600">
+            ✓ Coordinates loaded — 3D visualization will be available in results.
+          </p>
+        )}
       </div>
 
       {/* File validation message */}

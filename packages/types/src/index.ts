@@ -60,3 +60,12 @@ export type {
   HaighDiagramData,
   FEMAnalysisResult,
 } from './fem-analysis';
+
+// -- Coordinate & 3D Visualization Types ---
+export type {
+  NodeCoordinates,
+  Node3DVizPoint,
+  Component3DData,
+  BoundingBox3D,
+  Visualization3DData,
+} from './coordinates';

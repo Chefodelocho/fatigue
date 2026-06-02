@@ -2,13 +2,16 @@
  * Fatigue Analysis Page — Configure, Run, and View Results.
  *
  * Three-step workflow:
- * 1. Configure: Select material and upload CSV files
+ * 1. Configure: Select material and upload CSV files (+ optional coordinates)
  * 2. Analyze: Run the fatigue analysis
- * 3. Results: View Haigh diagram and safety factors
+ * 3. Results: View Haigh diagram, safety factors, and optional 3D visualization
  *
  * The API pre-computes Haigh diagram data for ALL four stress components
  * (VON, P1, P2, P3) in a single request. Switching components is instant
  * — no re-fetch required.
+ *
+ * When a coordinates file is uploaded, the API also returns 3D visualization
+ * data showing the spatial distribution of safety factors.
  *
  * Includes analysis history sidebar for reloading past analyses.
  *
@@ -25,6 +28,7 @@ import type {
   HaighPoint,
   NodeSafetyFactors,
   StressComponent,
+  Visualization3DData,
 } from '@fatigue/types';
 
 import type { MaterialConfig, AnalysisHistoryEntry } from '@/lib/analysis-store';
@@ -39,12 +43,14 @@ import FileUpload from '@/components/FileUpload';
 import HaighDiagram from '@/components/HaighDiagram';
 import MaterialSelector from '@/components/MaterialSelector';
 import SafetyFactorTable from '@/components/SafetyFactorTable';
+import Scatter3DChart from '@/components/Scatter3DChart';
 
 // -- Types --------------------------------------------------------------------
 
 interface UploadedFiles {
   readonly base: File;
   readonly load: File;
+  readonly coordinates?: File;
 }
 
 /** Haigh failure lines (same for all components — depend only on material). */
@@ -73,6 +79,7 @@ interface AnalysisData {
   readonly minSafetyFactors: Record<StressComponent, NodeSafetyFactors>;
   readonly haighLines: HaighLines;
   readonly haighPointsByComponent: Record<StressComponent, ComponentHaighData>;
+  readonly visualization3D: Visualization3DData | null;
 }
 
 type PageStep = 'configure' | 'loading' | 'results';
@@ -124,6 +131,9 @@ export default function AnalysisPage() {
       formData.append('baseFile', files.base);
       formData.append('loadFile', files.load);
       formData.append('material', JSON.stringify(material));
+      if (files.coordinates) {
+        formData.append('coordinatesFile', files.coordinates);
+      }
 
       const response = await fetch('/api/analyze-upload', {
         method: 'POST',
@@ -337,6 +347,24 @@ export default function AnalysisPage() {
                   <h2 className="mb-4 text-lg font-semibold text-gray-900">Haigh Diagram</h2>
                   <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
                     <HaighDiagram data={currentHaighData} component={component} />
+                  </div>
+                </section>
+              )}
+
+              {/* 3D Safety Factor Visualization */}
+              {data.visualization3D && (
+                <section>
+                  <h2 className="mb-4 text-lg font-semibold text-gray-900">
+                    3D Safety Factor Map
+                  </h2>
+                  <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                    <Scatter3DChart
+                      data={data.visualization3D.worstByComponent[component]}
+                      bounds={data.visualization3D.bounds}
+                      component={component}
+                      matchedNodeCount={data.visualization3D.matchedNodeCount}
+                      backgroundCoordinates={data.visualization3D.backgroundCoordinates}
+                    />
                   </div>
                 </section>
               )}

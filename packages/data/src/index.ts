@@ -10,3 +10,6 @@
 // -- FEM CSV Importers ---
 export { parseFEMStressCSV, loadFEMNodeStress } from './importers/fem-csv-parser';
 export type { NodeStressRow } from './importers/fem-csv-parser';
+
+// -- Coordinate CSV Importers ---
+export { parseCoordinatesCSV } from './importers/coordinates-csv-parser';
