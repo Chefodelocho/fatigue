@@ -91,6 +91,7 @@ export default function AnalysisPage() {
   const [material, setMaterial] = useState<MaterialConfig | null>(null);
   const [files, setFiles] = useState<UploadedFiles | null>(null);
   const [component, setComponent] = useState<StressComponent>('VON');
+  const [sfThreshold, setSfThreshold] = useState<number>(10);
 
   // Analysis state
   const [step, setStep] = useState<PageStep>('configure');
@@ -100,23 +101,41 @@ export default function AnalysisPage() {
   // Derived: can we run the analysis?
   const canAnalyze = material !== null && files !== null;
 
-  // Reconstruct HaighDiagramData for the currently selected component
+  // Reconstruct HaighDiagramData for the currently selected component,
+  // filtered by the SF threshold slider
   const currentHaighData: HaighDiagramData | null = useMemo(() => {
     if (!data) return null;
     const compData = data.haighPointsByComponent[component];
     if (!compData) return null;
+    const filteredPoints = compData.points.filter(
+      (p) => p.goodmanSF <= sfThreshold,
+    );
     return {
       goodmanLine: data.haighLines.goodmanLine,
       gerberLine: data.haighLines.gerberLine,
       soderbergLine: data.haighLines.soderbergLine,
       yieldLine: data.haighLines.yieldLine,
-      points: compData.points,
+      points: filteredPoints,
     };
-  }, [data, component]);
+  }, [data, component, sfThreshold]);
+
+  // Filtered 3D worst nodes by SF threshold
+  const filtered3DData = useMemo(() => {
+    if (!data?.visualization3D) return null;
+    const compData = data.visualization3D.worstByComponent[component];
+    const filteredNodes = compData.worstNodes.filter(
+      (n) => n.minSF <= sfThreshold,
+    );
+    return {
+      worstNodes: filteredNodes,
+      totalMatchedNodes: compData.totalMatchedNodes,
+    };
+  }, [data, component, sfThreshold]);
 
   // Current component's total point count (for display)
   const currentTotalPoints = data?.haighPointsByComponent[component]?.totalPoints ?? 0;
-  const currentPointCount = data?.haighPointsByComponent[component]?.points.length ?? 0;
+  const currentPointCount = currentHaighData?.points.length ?? 0;
+  const current3DPointCount = filtered3DData?.worstNodes.length ?? 0;
 
   // -- Handlers ---------------------------------------------------------------
 
@@ -333,12 +352,40 @@ export default function AnalysisPage() {
                     </button>
                   ))}
                 </div>
-                {currentTotalPoints !== currentPointCount && (
-                  <span className="ml-3 text-xs text-gray-400">
-                    Showing {currentPointCount.toLocaleString()} of{' '}
-                    {currentTotalPoints.toLocaleString()} points (worst by Goodman SF)
+                <span className="ml-3 text-xs text-gray-400">
+                  Showing {currentPointCount.toLocaleString()} of{' '}
+                  {currentTotalPoints.toLocaleString()} pre-computed points
+                </span>
+              </div>
+
+              {/* Safety Factor Threshold Slider */}
+              <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                <div className="flex items-center gap-4">
+                  <label
+                    htmlFor="sf-threshold"
+                    className="text-sm font-medium text-gray-700 whitespace-nowrap"
+                  >
+                    Max Safety Factor
+                  </label>
+                  <input
+                    id="sf-threshold"
+                    type="range"
+                    min={0.5}
+                    max={10}
+                    step={0.1}
+                    value={sfThreshold}
+                    onChange={(e) => setSfThreshold(parseFloat(e.target.value))}
+                    className="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-gray-200 accent-fatigue-600"
+                  />
+                  <span className="min-w-[3rem] text-right text-sm font-semibold text-fatigue-600">
+                    {sfThreshold.toFixed(1)}
                   </span>
-                )}
+                </div>
+                <p className="mt-1 text-xs text-gray-400">
+                  Filter nodes with SF ≤ {sfThreshold.toFixed(1)}: showing{' '}
+                  {currentPointCount.toLocaleString()} Haigh points ·{' '}
+                  {current3DPointCount.toLocaleString()} 3D nodes
+                </p>
               </div>
 
               {/* Haigh Diagram */}
@@ -359,7 +406,7 @@ export default function AnalysisPage() {
                   </h2>
                   <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
                     <Scatter3DChart
-                      data={data.visualization3D.worstByComponent[component]}
+                      data={filtered3DData ?? data.visualization3D.worstByComponent[component]}
                       bounds={data.visualization3D.bounds}
                       component={component}
                       matchedNodeCount={data.visualization3D.matchedNodeCount}
