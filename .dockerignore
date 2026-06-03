@@ -44,16 +44,13 @@ docs/
 .roo/
 .roomodes
 *.md
-!.dockerignore
 
 # Git
 .git/
 .gitignore
 .gitattributes
 
-# pnpm
-pnpm-lock.yaml
-
 # Large reference CSVs (not shipped in container by default)
+# Mounted at runtime via docker-compose volumes
 data/reference/base/
 data/reference/load/

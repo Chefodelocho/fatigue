@@ -22,7 +22,7 @@
  * @module lib/session-cookie
  */
 
-import { type NextRequest, NextResponse } from 'next/server';
+import type { NextRequest, NextResponse } from 'next/server';
 
 // -- Constants -----------------------------------------------------------------
 

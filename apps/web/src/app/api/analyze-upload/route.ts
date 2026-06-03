@@ -231,7 +231,10 @@ function buildVisualization3D(
     const sampled: NodeCoordinates[] = [];
     for (let i = 0; i < MAX_BACKGROUND_POINTS; i++) {
       const idx = Math.floor(i * stride);
-      sampled.push(allMatchedCoords[idx]!);
+      const point = allMatchedCoords[idx];
+      if (point !== undefined) {
+        sampled.push(point);
+      }
     }
     backgroundCoordinates = sampled;
   }

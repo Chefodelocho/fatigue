@@ -55,8 +55,11 @@ RUN npx tsc
 WORKDIR /app/packages/ui
 RUN npx tsc
 
-# Build the Next.js application
+# Ensure public directory exists (Next.js requires it)
 WORKDIR /app/apps/web
+RUN mkdir -p public
+
+# Build the Next.js application
 RUN npx next build
 
 # ---- Stage 4: Production ----
