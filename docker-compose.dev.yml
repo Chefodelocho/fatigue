@@ -1,0 +1,29 @@
+# =============================================================================
+# Fatigue Analysis Tool — Development Docker Compose Override
+#
+# Enables hot-reloading and mounts source code for development.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+# =============================================================================
+
+version: '3.8'
+
+services:
+  fatigue-web:
+    build:
+      target: base  # Build up to the base stage, mount source for dev
+    image: fatigue/fatigue-web:dev
+    environment:
+      - NODE_ENV=development
+    volumes:
+      # Mount source code for hot-reloading
+      - ./apps:/app/apps
+      - ./packages:/app/packages
+      - ./data:/app/data
+      - ./package.json:/app/package.json
+      - ./pnpm-workspace.yaml:/app/pnpm-workspace.yaml
+      - ./tsconfig.base.json:/app/tsconfig.base.json
+      # Node modules are already in the image, don't override
+    command: >
+      sh -c "pnpm install --frozen-lockfile && pnpm dev"

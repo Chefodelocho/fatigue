@@ -5,6 +5,11 @@
  * analysis pipeline (CSV parsing → stress pair computation → safety
  * factors → Haigh diagram), and returns the result as JSON.
  *
+ * Results are cached PER SESSION using a `fatigue-session-id` cookie
+ * so that different browser sessions get isolated caches. This is
+ * essential when deployed behind Docker with multiple users sharing
+ * the same server process.
+ *
  * Pre-computes Haigh diagram scatter points for ALL four stress
  * components (VON, P1, P2, P3) in a single request so the frontend
  * can switch components instantly without re-fetching.
@@ -14,7 +19,7 @@
 
 import path from 'node:path';
 
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 
 import type {
   FEMAnalysisResult,
@@ -26,6 +31,13 @@ import type {
 
 import { analyzeFEMData, generateHaighDiagramData } from '@fatigue/core';
 import { loadFEMNodeStress } from '@fatigue/data';
+
+import {
+  buildCacheKey,
+  createSessionCache,
+  getOrCreateSessionId,
+  applySessionCookie,
+} from '@/lib/session-cookie';
 
 // -- Configuration ------------------------------------------------------------
 
@@ -42,13 +54,16 @@ const MATERIAL = {
   enduranceLimit: 250,
 } as const;
 
-// -- Cached result ------------------------------------------------------------
+// -- Session-scoped cache -----------------------------------------------------
 
 /**
- * Cached full analysis result. The CSV parsing + analysis is expensive
- * (~84 MB × 2 files, ~931 K nodes), so we compute once and reuse.
+ * In-memory cache keyed by session ID.
+ *
+ * Each browser session gets its own cached result so that recomputation
+ * is avoided while ensuring cross-session isolation. Entries expire
+ * after 2 hours of inactivity.
  */
-let cachedResult: FEMAnalysisResult | null = null;
+const analysisCache = createSessionCache<FEMAnalysisResult>();
 
 // -- Helpers ------------------------------------------------------------------
 
@@ -102,18 +117,34 @@ function sanitizeNodeSF(sf: NodeSafetyFactors): NodeSafetyFactors {
  * GET /api/analyze
  *
  * Runs the full FEM fatigue analysis and returns results for ALL stress
- * components in a single response.
+ * components in a single response. Results are cached per session based
+ * on the `fatigue-session-id` cookie.
  */
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   const startTime = performance.now();
 
   try {
-    // Run analysis (cached after first call)
-    const result = await getOrComputeAnalysis();
-    const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+    // Resolve session ID from cookie (generates one if absent)
+    const { sessionId, setCookieHeader } = getOrCreateSessionId(request);
+    const cacheKey = buildCacheKey('analyze', sessionId);
 
-    const response = buildResponse(result, elapsed);
-    return NextResponse.json(response);
+    // Check session-scoped cache
+    let result = analysisCache.get(cacheKey);
+
+    if (!result) {
+      console.log(`[api/analyze] Session ${sessionId.slice(0, 8)}… — computing fresh result`);
+      result = await computeAnalysis();
+      analysisCache.set(cacheKey, result);
+    } else {
+      console.log(`[api/analyze] Session ${sessionId.slice(0, 8)}… — using cached result`);
+    }
+
+    const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+    const json = buildResponse(result, elapsed);
+
+    const response = NextResponse.json(json);
+    applySessionCookie(response, setCookieHeader);
+    return response;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('[api/analyze] Error:', message);
@@ -125,14 +156,12 @@ export async function GET(): Promise<NextResponse> {
   }
 }
 
-/**
- * Returns the cached analysis result or computes a fresh one.
- */
-async function getOrComputeAnalysis(): Promise<FEMAnalysisResult> {
-  if (cachedResult !== null) {
-    return cachedResult;
-  }
+// -- Analysis Computation -----------------------------------------------------
 
+/**
+ * Performs the full FEM analysis pipeline (no caching).
+ */
+async function computeAnalysis(): Promise<FEMAnalysisResult> {
   console.log('[api/analyze] Loading CSV files and running analysis...');
 
   // Resolve file paths relative to the monorepo root
@@ -151,7 +180,6 @@ async function getOrComputeAnalysis(): Promise<FEMAnalysisResult> {
   const result = analyzeFEMData(nodes, MATERIAL);
   console.log('[api/analyze] Analysis complete');
 
-  cachedResult = result;
   return result;
 }
 

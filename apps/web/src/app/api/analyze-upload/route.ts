@@ -7,6 +7,11 @@
  * - `material`: JSON string with material properties
  * - `coordinatesFile`: (optional) Node coordinates CSV file for 3D visualization
  *
+ * Results are cached PER SESSION using a `fatigue-session-id` cookie
+ * so that different browser sessions get isolated caches. This is
+ * essential when deployed behind Docker with multiple users sharing
+ * the same server process.
+ *
  * Pre-computes Haigh diagram scatter points for ALL four stress
  * components (VON, P1, P2, P3) in a single request so the frontend
  * can switch components instantly without re-fetching.
@@ -35,12 +40,30 @@ import type {
 import { analyzeFEMData, generateHaighDiagramData } from '@fatigue/core';
 import { loadFEMNodeStress, parseCoordinatesCSV } from '@fatigue/data';
 
+import {
+  buildCacheKey,
+  createSessionCache,
+  getOrCreateSessionId,
+  applySessionCookie,
+} from '@/lib/session-cookie';
+
 // -- Configuration ------------------------------------------------------------
 
 const MAX_SCATTER_POINTS = 10_000;
 const MAX_3D_POINTS = 10_000;
 const MAX_BACKGROUND_POINTS = 40_000;
 const ALL_COMPONENTS: readonly StressComponent[] = ['VON', 'P1', 'P2', 'P3'] as const;
+
+// -- Session-scoped cache -----------------------------------------------------
+
+/**
+ * In-memory cache keyed by session ID.
+ *
+ * Stores upload analysis results so re-uploads with identical files
+ * within the same session don't re-compute. Cache entries expire
+ * after 2 hours.
+ */
+const uploadCache = createSessionCache<object>();
 
 // -- Helpers ------------------------------------------------------------------
 
@@ -229,11 +252,26 @@ function buildVisualization3D(
  *
  * Accepts FormData with CSV files and material properties, runs analysis
  * for ALL stress components, and returns pre-computed results.
+ * Results are cached per session based on the `fatigue-session-id` cookie.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const startTime = performance.now();
 
   try {
+    // Resolve session ID from cookie (generates one if absent)
+    const { sessionId, setCookieHeader } = getOrCreateSessionId(request);
+    const cacheKey = buildCacheKey('analyze-upload', sessionId);
+
+    // Check session-scoped cache
+    const cached = uploadCache.get(cacheKey);
+    if (cached) {
+      const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+      console.log(`[api/analyze-upload] Session ${sessionId.slice(0, 8)}… — using cached result`);
+      const response = NextResponse.json({ ...cached, computeTimeSeconds: elapsed });
+      applySessionCookie(response, setCookieHeader);
+      return response;
+    }
+
     const formData = await request.formData();
 
     // Extract files
@@ -381,7 +419,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         );
       }
 
-      const response = {
+      const responsePayload = {
         material,
         nodeCount: result.nodeCount,
         computeTimeSeconds: elapsed,
@@ -391,7 +429,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         visualization3D,
       };
 
-      return NextResponse.json(response);
+      // Cache the result for this session
+      uploadCache.set(cacheKey, responsePayload);
+
+      const response = NextResponse.json(responsePayload);
+      applySessionCookie(response, setCookieHeader);
+      return response;
     } finally {
       // Clean up temp files
       await unlink(basePath).catch(() => {});

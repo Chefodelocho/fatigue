@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+coverage/
+test-results/
+playwright-report/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Cache
+.turbo/
+.cache/
+.eslintcache
+
+# Docs / meta (not needed at runtime)
+docs/
+.roo/
+.roomodes
+*.md
+!.dockerignore
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# pnpm
+pnpm-lock.yaml
+
+# Large reference CSVs (not shipped in container by default)
+data/reference/base/
+data/reference/load/

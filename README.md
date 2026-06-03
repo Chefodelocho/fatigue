@@ -1,69 +1,96 @@
-# Fatigue — Web-Based Fatigue Analysis Tool
+<div align="center">
 
-A modern, extensible, web-based platform for performing fatigue life assessments using industry-standard methodologies.
+# Fatigue
+
+**A modern, web-based fatigue analysis tool for structural and mechanical engineering**
+
+[![CI](https://github.com/<your-org>/fatigue/actions/workflows/ci.yml/badge.svg)](https://github.com/<your-org>/fatigue/actions/workflows/ci.yml)
+[![Docker](https://github.com/<your-org>/fatigue/actions/workflows/docker.yml/badge.svg)](https://github.com/<your-org>/fatigue/actions/workflows/docker.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/typescript-strict-blue)](https://www.typescriptlang.org/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+</div>
+
+---
 
 ## Overview
 
-Fatigue provides engineers with an interactive tool for analyzing structural and mechanical fatigue. It supports multiple international standards and offers real-time visualization of analysis results.
+**Fatigue** is an open-source, extensible platform for performing fatigue life
+assessments using industry-standard methodologies. It provides engineers with
+interactive tools for analyzing structural and mechanical fatigue, supporting
+multiple international standards with real-time visualization of results.
 
-### Key Features (Planned)
+### Key Features
 
-- **S-N Curve Analysis**: Define and evaluate S-N (Wöhler) curves per material and standard
-- **Rainflow Cycle Counting**: ASTM E1049-compliant cycle extraction from time-series data
-- **Cumulative Damage**: Palmgren-Miner linear damage accumulation
-- **Mean Stress Correction**: Goodman, Gerber, Soderberg, and Morrow methods
-- **Stress Concentration**: SCF calculation for common geometric features
-- **Load Spectrum Processing**: Import, generate, and manipulate load spectra
-- **Multi-Standard Support**: Eurocode 3, DNVGL-RP-C203, ABS, API 579, IIW
-- **Interactive Visualizations**: S-N plots, damage accumulation charts, Goodman diagrams
-- **Data Import**: CSV, HDF5, and custom format support
+- **S-N Curve Analysis** — Define and evaluate S-N (Wöhler) curves per material and standard
+- **Rainflow Cycle Counting** — ASTM E1049-compliant cycle extraction from time-series data
+- **Cumulative Damage** — Palmgren-Miner linear damage accumulation
+- **Mean Stress Correction** — Goodman, Gerber, Soderberg, and Morrow methods
+- **Stress Concentration** — SCF calculation for common geometric features
+- **Load Spectrum Processing** — Import, generate, and manipulate load spectra
+- **Multi-Standard Support** — Eurocode 3, DNVGL-RP-C203, ABS, API 579, IIW
+- **Interactive Visualizations** — S-N plots, Haigh diagrams, 3D scatter plots
+- **Data Import** — CSV, HDF5, and custom format support
+- **Session-Isolated Caching** — Results are cached per browser session via secure cookies, enabling safe multi-user Docker deployments
+- **Docker Ready** — Production-grade Docker setup with health checks and non-root user
 
 ## Technology Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Language | TypeScript (strict mode) |
-| Frontend | Next.js 14+ (App Router), React 18+ |
-| Charts | Plotly.js / D3.js |
-| Styling | Tailwind CSS |
-| State | Zustand |
-| Testing | Vitest (unit), Playwright (E2E) |
-| Build | pnpm workspaces, Turbopack |
-| CI/CD | GitHub Actions |
+| Layer            | Technology                                    |
+|------------------|-----------------------------------------------|
+| Language         | TypeScript (strict mode)                      |
+| Frontend         | Next.js 14+ (App Router), React 18+           |
+| Charts           | Plotly.js                                     |
+| Styling          | Tailwind CSS                                  |
+| State Management | Zustand                                       |
+| Testing          | Vitest (unit), Playwright (E2E)               |
+| Package Manager  | pnpm workspaces                               |
+| Containerization | Docker, Docker Compose                        |
+| CI/CD            | GitHub Actions                                |
 
 ## Project Structure
 
 ```
 fatigue/
-├── .roo/                    # Roo Code configuration
-│   ├── mcp.json             # MCP server configuration
-│   └── rules/               # Context rules for AI agents
-├── .roomodes                # Custom Roo Code mode definitions
 ├── apps/
-│   └── web/                 # Next.js frontend application
+│   └── web/              # Next.js frontend application
 ├── packages/
-│   ├── core/                # Core fatigue calculation engine
-│   ├── data/                # Data processing & pipeline utilities
-│   ├── types/               # Shared TypeScript types & interfaces
-│   └── ui/                  # Shared UI component library
-├── docs/                    # Documentation
-├── tests/                   # Integration & validation tests
-│   └── validation/          # Standard-specific validation cases
-└── data/                    # Sample datasets & reference data
+│   ├── core/             # Core fatigue calculation engine (pure functions)
+│   ├── data/             # Data processing & pipeline utilities
+│   ├── types/            # Shared TypeScript types & branded units
+│   └── ui/               # Shared React UI component library
+├── docs/                 # Documentation
+├── tests/                # Integration, validation & E2E tests
+├── data/                 # Sample datasets & reference data
+├── .github/              # CI/CD workflows & issue templates
+│   ├── workflows/
+│   │   ├── ci.yml        # Continuous integration
+│   │   ├── docker.yml    # Docker image build & publish
+│   │   └── release.yml   # Release automation
+│   └── ISSUE_TEMPLATE/   # Bug report & feature request templates
+├── Dockerfile            # Multi-stage Docker build
+├── docker-compose.yml    # Production Docker Compose
+├── docker-compose.dev.yml# Development Docker Compose
+├── LICENSE               # MIT License
+├── CONTRIBUTING.md       # Contribution guidelines
+├── SECURITY.md           # Security policy
+└── CODE_OF_CONDUCT.md    # Code of conduct
 ```
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js ≥ 20
-- pnpm ≥ 8
+- **Node.js** ≥ 20
+- **pnpm** ≥ 8 (install via `corepack enable && corepack prepare pnpm@9.1.0 --activate`)
 
-### Installation
+### Local Development
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/<your-org>/fatigue.git
 cd fatigue
 
 # Install dependencies
@@ -76,47 +103,124 @@ pnpm build
 pnpm dev
 ```
 
-### Development Commands
+The application will be available at [http://localhost:3000](http://localhost:3000).
+
+### Docker Deployment
 
 ```bash
-pnpm dev          # Start development server
-pnpm build        # Build all packages
-pnpm test         # Run all tests
-pnpm lint         # Lint all packages
-pnpm clean        # Clean build artifacts
+# Production build and run
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Stop
+docker compose down
 ```
 
-## AI-Assisted Development with Roo Code
+The application will be available at [http://localhost:3000](http://localhost:3000).
 
-This project is configured for AI-assisted development using [Roo Code](https://roocode.com/) with specialized modes:
+### Docker Development (with hot-reloading)
 
-| Mode | Description |
-|------|-------------|
-| 🏗️ Fatigue Architect | System design, architecture decisions |
-| ⚙️ Fatigue Engine Dev | Core calculation algorithms |
-| 🎨 Fatigue UI Dev | Frontend & visualization components |
-| 📊 Fatigue Data Engineer | Data pipelines & processing |
-| 🧪 Fatigue QA Engineer | Testing & validation |
-| 📝 Fatigue Tech Writer | Documentation |
-| 🚀 Fatigue DevOps | CI/CD & build pipeline |
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+```
 
-### Context Files
+### Development Commands
 
-The `.roo/rules/` directory contains domain knowledge that Roo Code agents use:
+| Command               | Description                        |
+|-----------------------|------------------------------------|
+| `pnpm dev`            | Start development server           |
+| `pnpm build`          | Build all packages                  |
+| `pnpm test`           | Run all tests                       |
+| `pnpm lint`           | Lint all packages                   |
+| `pnpm format`         | Format code with Prettier           |
+| `pnpm format:check`   | Check formatting                    |
+| `pnpm clean`          | Clean build artifacts               |
+| `pnpm typecheck`      | Type-check all packages             |
 
-- `project-overview.md` — Project vision, structure, and conventions
-- `architecture.md` — System architecture and design patterns
-- `fatigue-domain.md` — Fatigue analysis domain knowledge & formulas
-- `coding-standards.md` — TypeScript standards, testing, and formatting rules
+## Architecture
 
-## Development Phases
+### Layered Design
 
-1. **Phase 1**: Core engine — S-N curves, rainflow counting, Miner's rule
-2. **Phase 2**: Data pipeline — CSV import, signal processing, load spectra
-3. **Phase 3**: Web UI — Interactive dashboard, plot components, input forms
-4. **Phase 4**: Multi-standard support — Add design standard libraries
-5. **Phase 5**: Advanced features — Probabilistic analysis, FEA integration
+```
+┌─────────────────────────────────────┐
+│         Presentation Layer          │  Next.js App Router, React
+├─────────────────────────────────────┤
+│         Application Layer           │  Use cases, orchestration
+├─────────────────────────────────────┤
+│         Domain Layer                │  Core calculations, types
+├─────────────────────────────────────┤
+│         Infrastructure Layer        │  Data I/O, file parsing
+└─────────────────────────────────────┘
+```
+
+### Package Dependencies
+
+```
+types ← core ← data ← ui ← web
+        ↑         ↑
+        └─────────┘  (data depends on core for types)
+```
+
+### Data Flow
+
+```
+Raw Data → Importer → Time Series → Rainflow Counter → Cycle Matrix
+                                                          ↓
+Results ← Damage Calc ← S-N Evaluation ← Load Spectrum ← Cycle Matrix
+   ↓
+Visualization / Export
+```
+
+## API Endpoints
+
+| Method | Endpoint              | Description                                  |
+|--------|-----------------------|----------------------------------------------|
+| GET    | `/api/health`         | Health check for Docker container orchestration |
+| GET    | `/api/analyze`        | Analyze reference dataset (session-cached)   |
+| POST   | `/api/analyze-upload` | Upload and analyze custom CSV files          |
+
+All analysis endpoints use session-isolated caching. The `fatigue-session-id`
+cookie ensures each browser session gets its own cached result.
+
+## Supported Standards (Planned)
+
+- **DIN EN 1993-1-9** (Eurocode 3 - Steel structures)
+- **DNVGL-RP-C203** (Offshore structures)
+- **ABS** (American Bureau of Shipping)
+- **API 579-1/ASME FFS-1** (Fitness-for-Service)
+- **IIW** (International Institute of Welding)
+
+## Development Roadmap
+
+- **Phase 1** ✅ Core engine — S-N curves, rainflow counting, Miner's rule
+- **Phase 2** 🚧 Data pipeline — CSV import, signal processing, load spectra
+- **Phase 3** 🚧 Web UI — Interactive dashboard, plot components, input forms
+- **Phase 4** ⬜ Multi-standard support — Add design standard libraries
+- **Phase 5** ⬜ Advanced features — Probabilistic analysis, FEA integration
+
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md)
+for details on:
+
+- Development setup and workflow
+- Coding standards and TypeScript conventions
+- Testing requirements
+- Pull request process
+
+## Security
+
+If you discover a security vulnerability, please follow our [Security Policy](SECURITY.md)
+for responsible disclosure. **Do not** report security issues via public GitHub issues.
 
 ## License
 
-TBD
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+<div align="center">
+  Made with ❤️ for the engineering community
+</div>

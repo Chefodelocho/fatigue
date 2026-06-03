@@ -1,0 +1,79 @@
+# =============================================================================
+# Release — Automated Release Workflow
+#
+# Triggered by pushing a version tag (v*.*.*).
+# Runs CI, builds Docker images, and creates a GitHub Release.
+# =============================================================================
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  # ---- CI Checks ------------------------------------------------------------
+  ci:
+    name: CI Checks
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
+  # ---- Docker Build & Publish -----------------------------------------------
+  docker:
+    name: Docker Build & Publish
+    needs: [ci]
+    uses: ./.github/workflows/docker.yml
+    secrets: inherit
+
+  # ---- GitHub Release -------------------------------------------------------
+  release:
+    name: Create GitHub Release
+    needs: [ci, docker]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          # Extract changelog between last tag and this tag
+          PREV_TAG=$(git tag --sort=-version:refname | head -n 2 | tail -n 1)
+          echo "Previous tag: $PREV_TAG"
+          echo "Current tag: ${{ github.ref_name }}"
+
+          if [ -z "$PREV_TAG" ]; then
+            NOTES="Initial release ${{ github.ref_name }}"
+          else
+            NOTES=$(git log --oneline --no-decorate "$PREV_TAG..${{ github.ref_name }}" 2>/dev/null || echo "No changelog available")
+          fi
+
+          # Write notes to file
+          cat << EOF > release_notes.md
+          ## Release ${{ github.ref_name }}
+
+          ### Changes since previous release
+
+          $NOTES
+
+          ### Docker Image
+
+          Pull the Docker image from GitHub Container Registry:
+
+          \`\`\`bash
+          docker pull ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          \`\`\`
+          EOF
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release_notes.md
+          generate_release_notes: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
