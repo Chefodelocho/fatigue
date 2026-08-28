@@ -1,11 +1,11 @@
 <div align="center">
 
-# Fatigue
+# Fatigue Analysis Tool
 
-**A modern, web-based fatigue analysis tool for structural and mechanical engineering**
+**SolidWorks FEM fatigue analysis — straight from your browser**
 
-[![CI](https://github.com/<your-org>/fatigue/actions/workflows/ci.yml/badge.svg)](https://github.com/<your-org>/fatigue/actions/workflows/ci.yml)
-[![Docker](https://github.com/<your-org>/fatigue/actions/workflows/docker.yml/badge.svg)](https://github.com/<your-org>/fatigue/actions/workflows/docker.yml)
+[![CI](https://github.com/Chefodelocho/fatigue/actions/workflows/ci.yml/badge.svg)](https://github.com/Chefodelocho/fatigue/actions/workflows/ci.yml)
+[![Docker](https://github.com/Chefodelocho/fatigue/actions/workflows/docker.yml/badge.svg)](https://github.com/Chefodelocho/fatigue/actions/workflows/docker.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/typescript-strict-blue)](https://www.typescriptlang.org/)
@@ -15,212 +15,231 @@
 
 ---
 
-## Overview
+Take a SolidWorks FEM stress export, drop it in, and get an **interactive Haigh diagram**, **per-node safety factors across all four stress components** (Von Mises, P1, P2, P3), and a **3D scatter plot** of your entire mesh — in seconds. No spreadsheets, no manual post-processing.
 
-**Fatigue** is an open-source, extensible platform for performing fatigue life
-assessments using industry-standard methodologies. It provides engineers with
-interactive tools for analyzing structural and mechanical fatigue, supporting
-multiple international standards with real-time visualization of results.
+---
 
-### Key Features
+## Quick Start
 
-- **S-N Curve Analysis** — Define and evaluate S-N (Wöhler) curves per material and standard
-- **Rainflow Cycle Counting** — ASTM E1049-compliant cycle extraction from time-series data
-- **Cumulative Damage** — Palmgren-Miner linear damage accumulation
-- **Mean Stress Correction** — Goodman, Gerber, Soderberg, and Morrow methods
-- **Stress Concentration** — SCF calculation for common geometric features
-- **Load Spectrum Processing** — Import, generate, and manipulate load spectra
-- **Multi-Standard Support** — Eurocode 3, DNVGL-RP-C203, ABS, API 579, IIW
-- **Interactive Visualizations** — S-N plots, Haigh diagrams, 3D scatter plots
-- **Data Import** — CSV, HDF5, and custom format support
-- **Session-Isolated Caching** — Results are cached per browser session via secure cookies, enabling safe multi-user Docker deployments
-- **Docker Ready** — Production-grade Docker setup with health checks and non-root user
+### Option A — Docker (recommended, no Node.js required)
+
+```bash
+git clone https://github.com/Chefodelocho/fatigue.git
+cd fatigue
+docker compose up -d
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+### Option B — Local development
+
+```bash
+git clone https://github.com/Chefodelocho/fatigue.git
+cd fatigue
+corepack enable && corepack prepare pnpm@9.1.0 --activate
+pnpm install
+pnpm dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+---
+
+## What It Does
+
+1. **Import FEM data** — Upload a SolidWorks stress results CSV (Von Mises + principal stresses per node).
+2. **Select your material** — Choose from the built-in library or enter custom ultimate/yield strength values.
+3. **Run the analysis** — The engine applies Goodman, Gerber, and Soderberg mean stress correction and computes a safety factor for every node.
+4. **Explore the results** — Interactive Haigh diagram, colour-coded 3D scatter plot, and a sortable table of critical nodes. Switch between stress components with a single click.
+5. **Save & compare** — Analyses are stored per session so you can compare configurations side by side.
+
+---
+
+## Screenshots
+
+### Upload & Configure
+
+Drop in a SolidWorks FEM CSV export and set material properties before running the analysis.
+
+<!-- Add screenshot: drag-and-drop upload panel with material selector -->
+![Upload Interface](docs/screenshots/01-upload.png)
+
+---
+
+### Haigh Diagram
+
+Interactive σ_m vs σ_a diagram with Goodman, Gerber, and Soderberg failure envelopes overlaid on the FEM node scatter. Click any node for its coordinates and safety factor.
+
+<!-- Add screenshot: Haigh diagram with node scatter and failure lines -->
+![Haigh Diagram](docs/screenshots/02-haigh-diagram.png)
+
+---
+
+### 3D Safety Factor Visualization
+
+All FEM nodes plotted in 3D space, coloured by safety factor. Rotate, zoom, and hover to inspect any node. Switch between Von Mises, P1, P2, and P3 instantly.
+
+<!-- Add screenshot: 3D scatter plot coloured by safety factor -->
+![3D Safety Factor Scatter](docs/screenshots/03-3d-scatter.png)
+
+---
+
+### Analysis History
+
+Session-saved analyses listed for easy comparison. Re-run with a different material or standard without re-uploading your data.
+
+<!-- Add screenshot: analysis history sidebar/table -->
+![Analysis History](docs/screenshots/04-results-table.png)
+
+---
+
+### SolidWorks Export (reference)
+
+Example SolidWorks FEM result export used as input. Export as CSV from the Results section of a Simulation study.
+
+<!-- Add screenshot: SolidWorks FEM results table or export dialog -->
+![SolidWorks Export](docs/screenshots/05-solidworks-export.png)
+
+> **To add screenshots:** place `.png` files in `docs/screenshots/` with the filenames above, then remove the HTML comment on that line.
+
+---
+
+## Key Features
+
+| Feature | Details |
+|---|---|
+| **Haigh Diagram** | Interactive σ_m vs σ_a plot with Goodman, Gerber & Soderberg lines |
+| **Safety Factors** | Per-node SF across Von Mises, P1, P2, and P3 stress components |
+| **3D Scatter Plot** | Full mesh visualisation coloured by safety factor; rotate & zoom |
+| **Mean Stress Correction** | Goodman, Gerber, Soderberg, Morrow |
+| **SolidWorks CSV Import** | Direct import of FEM stress result exports |
+| **Rainflow Counting** | ASTM E1049-compliant cycle extraction |
+| **Cumulative Damage** | Palmgren-Miner linear damage accumulation |
+| **Session Caching** | Each browser session is isolated — safe for multi-user deployments |
+| **Docker Ready** | Multi-stage build, health checks, non-root user |
+
+---
 
 ## Technology Stack
 
-| Layer            | Technology                                    |
-|------------------|-----------------------------------------------|
-| Language         | TypeScript (strict mode)                      |
-| Frontend         | Next.js 14+ (App Router), React 18+           |
-| Charts           | Plotly.js                                     |
-| Styling          | Tailwind CSS                                  |
-| State Management | Zustand                                       |
-| Testing          | Vitest (unit), Playwright (E2E)               |
-| Package Manager  | pnpm workspaces                               |
-| Containerization | Docker, Docker Compose                        |
-| CI/CD            | GitHub Actions                                |
+| Layer | Technology |
+|---|---|
+| Language | TypeScript (strict) |
+| Frontend | Next.js 14, React 18 |
+| Visualisation | Plotly.js |
+| Styling | Tailwind CSS |
+| State | Zustand |
+| Testing | Vitest, Playwright |
+| Packages | pnpm workspaces |
+| Container | Docker, Docker Compose |
+| CI/CD | GitHub Actions |
+
+---
 
 ## Project Structure
 
 ```
 fatigue/
-├── apps/
-│   └── web/              # Next.js frontend application
+├── apps/web/             # Next.js application
 ├── packages/
-│   ├── core/             # Core fatigue calculation engine (pure functions)
-│   ├── data/             # Data processing & pipeline utilities
+│   ├── core/             # Fatigue calculation engine (pure functions)
+│   │   ├── sn-curve/     # S-N curve evaluation
+│   │   ├── rainflow/     # ASTM E1049 cycle counting
+│   │   ├── damage/       # Palmgren-Miner accumulation
+│   │   ├── mean-stress/  # Goodman / Gerber / Soderberg / Morrow
+│   │   ├── concentration/# Stress concentration factors
+│   │   └── standards/    # Design standard helpers
+│   ├── data/             # FEM CSV parser & data pipeline
 │   ├── types/            # Shared TypeScript types & branded units
-│   └── ui/               # Shared React UI component library
-├── docs/                 # Documentation
-├── tests/                # Integration, validation & E2E tests
-├── data/                 # Sample datasets & reference data
-├── .github/              # CI/CD workflows & issue templates
-│   ├── workflows/
-│   │   ├── ci.yml        # Continuous integration
-│   │   ├── docker.yml    # Docker image build & publish
-│   │   └── release.yml   # Release automation
-│   └── ISSUE_TEMPLATE/   # Bug report & feature request templates
-├── Dockerfile            # Multi-stage Docker build
-├── docker-compose.yml    # Production Docker Compose
-├── docker-compose.dev.yml# Development Docker Compose
-├── LICENSE               # MIT License
-├── CONTRIBUTING.md       # Contribution guidelines
-├── SECURITY.md           # Security policy
-└── CODE_OF_CONDUCT.md    # Code of conduct
+│   └── ui/               # Shared React components
+├── docs/                 # Documentation & screenshots
+├── data/                 # Sample FEM datasets
+├── tests/                # Integration & E2E tests
+├── Dockerfile
+├── docker-compose.yml
+└── docker-compose.dev.yml
 ```
 
-## Getting Started
+---
 
-### Prerequisites
+## API Endpoints
 
-- **Node.js** ≥ 20
-- **pnpm** ≥ 8 (install via `corepack enable && corepack prepare pnpm@9.1.0 --activate`)
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/health` | Health check for container orchestration |
+| `GET` | `/api/analyze` | Analyse built-in sample dataset |
+| `POST` | `/api/analyze-upload` | Upload and analyse a SolidWorks CSV |
+| `POST` | `/api/recompute` | Re-run with different material (uses cached parse) |
+| `GET` | `/api/analyses` | List saved analyses for the current session |
+| `GET` | `/api/analyses/[id]` | Retrieve a specific saved analysis |
 
-### Local Development
+Session isolation is handled via a `fatigue-session-id` cookie — each browser gets its own result cache, making multi-user Docker deployments safe without any authentication setup.
 
-```bash
-# Clone the repository
-git clone https://github.com/<your-org>/fatigue.git
-cd fatigue
+---
 
-# Install dependencies
-pnpm install
-
-# Build all packages
-pnpm build
-
-# Run development server
-pnpm dev
-```
-
-The application will be available at [http://localhost:3000](http://localhost:3000).
-
-### Docker Deployment
+## Docker — Production Notes
 
 ```bash
-# Production build and run
+# Generate a session secret and start
+echo "SESSION_COOKIE_SECRET=$(openssl rand -hex 32)" > .env
 docker compose up -d
 
-# View logs
+# Logs
 docker compose logs -f
 
 # Stop
 docker compose down
 ```
 
-The application will be available at [http://localhost:3000](http://localhost:3000).
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the full production checklist (environment variables, volumes, reverse-proxy, TLS).
 
-### Docker Development (with hot-reloading)
+### Hot-reload in development
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 ```
 
-### Development Commands
+---
 
-| Command               | Description                        |
-|-----------------------|------------------------------------|
-| `pnpm dev`            | Start development server           |
-| `pnpm build`          | Build all packages                  |
-| `pnpm test`           | Run all tests                       |
-| `pnpm lint`           | Lint all packages                   |
-| `pnpm format`         | Format code with Prettier           |
-| `pnpm format:check`   | Check formatting                    |
-| `pnpm clean`          | Clean build artifacts               |
-| `pnpm typecheck`      | Type-check all packages             |
+## Development Commands
 
-## Architecture
+| Command | Description |
+|---|---|
+| `pnpm dev` | Start dev server |
+| `pnpm build` | Build all packages |
+| `pnpm test` | Run all tests |
+| `pnpm lint` | Lint all packages |
+| `pnpm typecheck` | Type-check all packages |
+| `pnpm format` | Format with Prettier |
+| `pnpm clean` | Remove build artefacts |
 
-### Layered Design
+---
 
-```
-┌─────────────────────────────────────┐
-│         Presentation Layer          │  Next.js App Router, React
-├─────────────────────────────────────┤
-│         Application Layer           │  Use cases, orchestration
-├─────────────────────────────────────┤
-│         Domain Layer                │  Core calculations, types
-├─────────────────────────────────────┤
-│         Infrastructure Layer        │  Data I/O, file parsing
-└─────────────────────────────────────┘
-```
+## Roadmap
 
-### Package Dependencies
+- [x] Core engine — S-N curves, rainflow counting, Miner's rule
+- [x] SolidWorks FEM CSV import & stress parsing
+- [x] Haigh diagrams, 3D scatter, analysis history
+- [ ] Multi-standard library — Eurocode 3, DNVGL-RP-C203, IIW, API 579
+- [ ] Probabilistic fatigue analysis
+- [ ] General FEA import (Ansys, Abaqus, Nastran)
 
-```
-types ← core ← data ← ui ← web
-        ↑         ↑
-        └─────────┘  (data depends on core for types)
-```
-
-### Data Flow
-
-```
-Raw Data → Importer → Time Series → Rainflow Counter → Cycle Matrix
-                                                          ↓
-Results ← Damage Calc ← S-N Evaluation ← Load Spectrum ← Cycle Matrix
-   ↓
-Visualization / Export
-```
-
-## API Endpoints
-
-| Method | Endpoint              | Description                                  |
-|--------|-----------------------|----------------------------------------------|
-| GET    | `/api/health`         | Health check for Docker container orchestration |
-| GET    | `/api/analyze`        | Analyze reference dataset (session-cached)   |
-| POST   | `/api/analyze-upload` | Upload and analyze custom CSV files          |
-
-All analysis endpoints use session-isolated caching. The `fatigue-session-id`
-cookie ensures each browser session gets its own cached result.
-
-## Supported Standards (Planned)
-
-- **DIN EN 1993-1-9** (Eurocode 3 - Steel structures)
-- **DNVGL-RP-C203** (Offshore structures)
-- **ABS** (American Bureau of Shipping)
-- **API 579-1/ASME FFS-1** (Fitness-for-Service)
-- **IIW** (International Institute of Welding)
-
-## Development Roadmap
-
-- **Phase 1** ✅ Core engine — S-N curves, rainflow counting, Miner's rule
-- **Phase 2** 🚧 Data pipeline — CSV import, signal processing, load spectra
-- **Phase 3** 🚧 Web UI — Interactive dashboard, plot components, input forms
-- **Phase 4** ⬜ Multi-standard support — Add design standard libraries
-- **Phase 5** ⬜ Advanced features — Probabilistic analysis, FEA integration
+---
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md)
-for details on:
-
-- Development setup and workflow
-- Coding standards and TypeScript conventions
-- Testing requirements
-- Pull request process
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow, coding standards, and PR process.
 
 ## Security
 
-If you discover a security vulnerability, please follow our [Security Policy](SECURITY.md)
-for responsible disclosure. **Do not** report security issues via public GitHub issues.
+Please follow [SECURITY.md](SECURITY.md) for responsible disclosure. Do not open public issues for security vulnerabilities.
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+[MIT](LICENSE)
 
 ---
 
 <div align="center">
-  Made with ❤️ for the engineering community
+  Built for engineers, by engineers.
 </div>

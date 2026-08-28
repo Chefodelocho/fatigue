@@ -1,7 +1,7 @@
 /**
  * Analysis history component — lists previous analyses with load/delete actions.
  *
- * Uses localStorage to persist analysis history across sessions.
+ * Fetches analysis history from the server-side store via `/api/analyses`.
  * Users can click a past analysis to reload its results.
  *
  * @module components/AnalysisHistory
@@ -9,13 +9,12 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import type { AnalysisHistoryEntry } from '@/lib/analysis-store';
 import {
-  loadHistory,
+  fetchHistory,
   deleteFromHistory,
-  clearHistory,
 } from '@/lib/analysis-store';
 
 // -- Props -------------------------------------------------------------------
@@ -32,19 +31,29 @@ interface AnalysisHistoryProps {
 export default function AnalysisHistory({ onLoad, disabled }: AnalysisHistoryProps) {
   const [history, setHistory] = useState<readonly AnalysisHistoryEntry[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    setHistory(loadHistory());
+  const refreshHistory = useCallback(async () => {
+    setIsLoading(true);
+    const entries = await fetchHistory();
+    setHistory(entries);
+    setIsLoading(false);
   }, []);
 
-  const handleDelete = (id: string) => {
-    deleteFromHistory(id);
-    setHistory(loadHistory());
+  useEffect(() => {
+    void refreshHistory();
+  }, [refreshHistory]);
+
+  const handleDelete = async (id: string) => {
+    await deleteFromHistory(id);
+    await refreshHistory();
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     if (confirm('Delete all analysis history? This cannot be undone.')) {
-      clearHistory();
+      for (const entry of history) {
+        await deleteFromHistory(entry.id);
+      }
       setHistory([]);
     }
   };
@@ -67,7 +76,7 @@ export default function AnalysisHistory({ onLoad, disabled }: AnalysisHistoryPro
             Analysis History
           </h2>
           <span className="text-xs text-gray-400">
-            {history.length} {history.length === 1 ? 'entry' : 'entries'}
+            {isLoading ? 'Loading…' : `${history.length} ${history.length === 1 ? 'entry' : 'entries'}`}
           </span>
         </div>
         <svg
@@ -83,7 +92,11 @@ export default function AnalysisHistory({ onLoad, disabled }: AnalysisHistoryPro
       {/* History List */}
       {isExpanded && (
         <div className="border-t border-gray-200">
-          {history.length === 0 ? (
+          {isLoading ? (
+            <div className="px-5 py-8 text-center text-sm text-gray-400">
+              Loading history…
+            </div>
+          ) : history.length === 0 ? (
             <div className="px-5 py-8 text-center text-sm text-gray-400">
               No previous analyses. Run your first analysis to see it here.
             </div>
@@ -102,7 +115,7 @@ export default function AnalysisHistory({ onLoad, disabled }: AnalysisHistoryPro
               </div>
               <div className="border-t border-gray-100 px-5 py-3">
                 <button
-                  onClick={handleClearAll}
+                  onClick={() => void handleClearAll()}
                   className="text-xs text-red-500 hover:text-red-700"
                 >
                   Clear All History
@@ -140,12 +153,11 @@ function HistoryItem({
   };
 
   // Find the worst safety factor across all components
-  const worstSF = Math.min(
-    entry.minSafetyFactors.VON.minSF,
-    entry.minSafetyFactors.P1.minSF,
-    entry.minSafetyFactors.P2.minSF,
-    entry.minSafetyFactors.P3.minSF,
-  );
+  // (guard against legacy entries missing minSafetyFactors)
+  const sf = entry.minSafetyFactors;
+  const worstSF = sf
+    ? Math.min(sf.VON?.minSF ?? 99, sf.P1?.minSF ?? 99, sf.P2?.minSF ?? 99, sf.P3?.minSF ?? 99)
+    : 99;
 
   return (
     <div className="flex items-center gap-3 border-b border-gray-50 px-5 py-3 last:border-b-0 hover:bg-gray-50">
@@ -171,7 +183,7 @@ function HistoryItem({
       <button
         onClick={(e) => {
           e.stopPropagation();
-          onDelete(entry.id);
+          void onDelete(entry.id);
         }}
         className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-500"
         title="Delete this entry"

@@ -63,10 +63,9 @@ RUN mkdir -p public
 RUN npx next build
 
 # ---- Stage 4: Production ----
+# Uses Next.js standalone output which includes its own minimal node_modules.
+# No full node_modules, no pnpm, no devDependencies — just the runtime bare minimum.
 FROM node:20-alpine AS production
-
-# Install pnpm for possible CLI usage
-RUN corepack enable && corepack prepare pnpm@9.1.0 --activate
 
 WORKDIR /app
 
@@ -74,35 +73,15 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 fatigue && \
     adduser --system --uid 1001 fatigue
 
-# Copy production dependencies only
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
-COPY --from=deps /app/packages/core/node_modules ./packages/core/node_modules
-COPY --from=deps /app/packages/data/node_modules ./packages/data/node_modules
-COPY --from=deps /app/packages/types/node_modules ./packages/types/node_modules
-COPY --from=deps /app/packages/ui/node_modules ./packages/ui/node_modules
+# Copy Next.js standalone output (includes minimal node_modules for runtime)
+COPY --chown=fatigue:fatigue --from=build /app/apps/web/.next/standalone ./
 
-# Copy built artifacts
-COPY --from=build /app/packages/types/dist ./packages/types/dist
-COPY --from=build /app/packages/core/dist ./packages/core/dist
-COPY --from=build /app/packages/data/dist ./packages/data/dist
-COPY --from=build /app/packages/ui/dist ./packages/ui/dist
+# Copy static assets and public directory
+COPY --chown=fatigue:fatigue --from=build /app/apps/web/.next/static ./apps/web/.next/static
+COPY --chown=fatigue:fatigue --from=build /app/apps/web/public ./apps/web/public
 
-# Copy Next.js standalone output
-COPY --from=build /app/apps/web/.next/standalone ./
-COPY --from=build /app/apps/web/.next/static ./apps/web/.next/static
-COPY --from=build /app/apps/web/public ./apps/web/public
-
-# Copy package manifests for workspace references
-COPY apps/web/package.json ./apps/web/package.json
-COPY pnpm-workspace.yaml ./
-COPY package.json ./
-
-# Copy reference data (if needed at runtime)
-COPY data/ ./data/
-
-# Set ownership
-RUN chown -R fatigue:fatigue /app
+# Copy reference data (mountable volume at runtime)
+COPY --chown=fatigue:fatigue data/ ./data/
 
 # Switch to non-root user
 USER fatigue

@@ -10,8 +10,6 @@
 #   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d  # Dev
 # =============================================================================
 
-version: '3.8'
-
 services:
   fatigue-web:
     build:
@@ -32,6 +30,8 @@ services:
     volumes:
       # Mount reference data for runtime access
       - ./data/reference:/app/data/reference:ro
+      # Persist saved analyses across container restarts
+      - fatigue-analyses:/app/data/analyses
     restart: unless-stopped
     healthcheck:
       test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:3000/api/health']
@@ -45,3 +45,7 @@ services:
 networks:
   fatigue-network:
     driver: bridge
+
+volumes:
+  fatigue-analyses:
+    driver: local

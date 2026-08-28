@@ -14,6 +14,10 @@
  * components (VON, P1, P2, P3) in a single request so the frontend
  * can switch components instantly without re-fetching.
  *
+ * The parsed FEM data is also cached (material-independent) so that
+ * the `/api/recompute` endpoint can quickly re-run the analysis when
+ * the user changes material properties.
+ *
  * @module api/analyze
  */
 
@@ -23,9 +27,6 @@ import { type NextRequest, NextResponse } from 'next/server';
 
 import type {
   FEMAnalysisResult,
-  HaighLinePoint,
-  HaighPoint,
-  NodeSafetyFactors,
   StressComponent,
 } from '@fatigue/types';
 
@@ -33,13 +34,20 @@ import { analyzeFEMData, generateHaighDiagramData } from '@fatigue/core';
 import { loadFEMNodeStress } from '@fatigue/data';
 
 import {
+  selectWorstPoints,
+  sanitizeAllMinSF,
+  type HaighLines,
+  type ComponentHaighData,
+} from '@/lib/analysis-helpers';
+import { setParsedData } from '@/lib/parsed-data-cache';
+import {
   buildCacheKey,
   createSessionCache,
   getOrCreateSessionId,
   applySessionCookie,
 } from '@/lib/session-cookie';
 
-// -- Configuration ------------------------------------------------------------
+// -- Configuration -----------------------------------------------------------
 
 /** Maximum number of scatter points per stress component. */
 const MAX_SCATTER_POINTS = 10_000;
@@ -65,52 +73,6 @@ const MATERIAL = {
  */
 const analysisCache = createSessionCache<FEMAnalysisResult>();
 
-// -- Helpers ------------------------------------------------------------------
-
-/**
- * Select the worst (lowest Goodman SF) Haigh points up to `maxSize`.
- *
- * Filters out non-finite Goodman SF values (NaN from computation errors,
- * Infinity from zero cyclic loading) before sorting. This ensures all
- * returned points have valid, finite safety factors that survive JSON
- * serialization without becoming null.
- *
- * @param points   - Full array of Haigh scatter points
- * @param maxSize  - Maximum number of points to return
- * @returns The worst `maxSize` points sorted by Goodman SF ascending
- */
-function selectWorstPoints(points: readonly HaighPoint[], maxSize: number): readonly HaighPoint[] {
-  // Filter out non-finite Goodman SF (NaN / Infinity → null in JSON → ?? 0 on client)
-  const finitePoints = points.filter((p) => Number.isFinite(p.goodmanSF));
-
-  if (finitePoints.length <= maxSize) {
-    return [...finitePoints].sort((a, b) => a.goodmanSF - b.goodmanSF);
-  }
-
-  const sorted = [...finitePoints].sort((a, b) => a.goodmanSF - b.goodmanSF);
-  return sorted.slice(0, maxSize);
-}
-
-/**
- * Sanitize a single NodeSafetyFactors for JSON serialization.
- *
- * Replaces NaN / Infinity values with a finite fallback so they
- * survive JSON.stringify() without becoming null.
- */
-function sanitizeNodeSF(sf: NodeSafetyFactors): NodeSafetyFactors {
-  const fin = (v: number) => (Number.isFinite(v) ? v : 9999.99);
-  return {
-    nodeId: sf.nodeId,
-    stressComponent: sf.stressComponent,
-    meanStress: sf.meanStress,
-    alternatingStress: sf.alternatingStress,
-    goodmanSF: fin(sf.goodmanSF),
-    gerberSF: fin(sf.gerberSF),
-    soderbergSF: fin(sf.soderbergSF),
-    minSF: fin(sf.minSF),
-  };
-}
-
 // -- Route Handler ------------------------------------------------------------
 
 /**
@@ -133,7 +95,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     if (!result) {
       console.log(`[api/analyze] Session ${sessionId.slice(0, 8)}… — computing fresh result`);
-      result = await computeAnalysis();
+      result = await computeAnalysis(sessionId);
       analysisCache.set(cacheKey, result);
     } else {
       console.log(`[api/analyze] Session ${sessionId.slice(0, 8)}… — using cached result`);
@@ -160,8 +122,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 /**
  * Performs the full FEM analysis pipeline (no caching).
+ * Also caches the parsed node data for recompute support.
  */
-async function computeAnalysis(): Promise<FEMAnalysisResult> {
+async function computeAnalysis(sessionId: string): Promise<FEMAnalysisResult> {
   console.log('[api/analyze] Loading CSV files and running analysis...');
 
   // Resolve file paths relative to the monorepo root
@@ -176,6 +139,9 @@ async function computeAnalysis(): Promise<FEMAnalysisResult> {
   const nodes = await loadFEMNodeStress(basePath, loadPath);
   console.log(`[api/analyze] Loaded ${nodes.length} nodes`);
 
+  // Cache parsed data for recompute (material-independent)
+  setParsedData(sessionId, { nodes, coordinates: null });
+
   // Run full analysis
   const result = analyzeFEMData(nodes, MATERIAL);
   console.log('[api/analyze] Analysis complete');
@@ -185,23 +151,11 @@ async function computeAnalysis(): Promise<FEMAnalysisResult> {
 
 // -- Response Types -----------------------------------------------------------
 
-interface HaighLines {
-  readonly goodmanLine: readonly HaighLinePoint[];
-  readonly gerberLine: readonly HaighLinePoint[];
-  readonly soderbergLine: readonly HaighLinePoint[];
-  readonly yieldLine: readonly HaighLinePoint[];
-}
-
-interface ComponentHaighData {
-  readonly points: readonly HaighPoint[];
-  readonly totalPoints: number;
-}
-
 interface AnalysisResponse {
   readonly material: typeof MATERIAL;
   readonly nodeCount: number;
   readonly computeTimeSeconds: string;
-  readonly minSafetyFactors: Record<StressComponent, NodeSafetyFactors>;
+  readonly minSafetyFactors: ReturnType<typeof sanitizeAllMinSF>;
   /** Failure criterion lines (same for all components — depend only on material) */
   readonly haighLines: HaighLines;
   /** Pre-computed worst-10k scatter points per stress component */
@@ -255,19 +209,11 @@ function buildResponse(
     };
   }
 
-  // Sanitize min safety factors for JSON (NaN/Infinity → null in JSON otherwise)
-  const sanitizedMinSF: Record<StressComponent, NodeSafetyFactors> = {
-    VON: sanitizeNodeSF(result.minSafetyFactors.VON),
-    P1: sanitizeNodeSF(result.minSafetyFactors.P1),
-    P2: sanitizeNodeSF(result.minSafetyFactors.P2),
-    P3: sanitizeNodeSF(result.minSafetyFactors.P3),
-  };
-
   return {
     material: MATERIAL,
     nodeCount: result.nodeCount,
     computeTimeSeconds: elapsed,
-    minSafetyFactors: sanitizedMinSF,
+    minSafetyFactors: sanitizeAllMinSF(result.minSafetyFactors),
     haighLines,
     haighPointsByComponent,
   };

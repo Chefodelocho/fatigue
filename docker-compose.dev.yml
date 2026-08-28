@@ -1,29 +1,41 @@
 # =============================================================================
 # Fatigue Analysis Tool — Development Docker Compose Override
 #
-# Enables hot-reloading and mounts source code for development.
+# Hot-reloading Next.js app with source code mounted from host.
 #
 # Usage:
-#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# The web app source (apps/web/src) is mounted for instant hot-reloading.
+# Changes to shared packages (types, core, data, ui) require a rebuild:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml build
 # =============================================================================
-
-version: '3.8'
 
 services:
   fatigue-web:
     build:
-      target: base  # Build up to the base stage, mount source for dev
+      target: build  # Use build stage (has all deps + built packages)
     image: fatigue/fatigue-web:dev
     environment:
       - NODE_ENV=development
     volumes:
-      # Mount source code for hot-reloading
-      - ./apps:/app/apps
-      - ./packages:/app/packages
-      - ./data:/app/data
-      - ./package.json:/app/package.json
-      - ./pnpm-workspace.yaml:/app/pnpm-workspace.yaml
+      # Mount web app source for hot-reloading via Turbopack
+      - ./apps/web/src:/app/apps/web/src
+      - ./apps/web/public:/app/apps/web/public
+      - ./apps/web/next.config.js:/app/apps/web/next.config.js
+      - ./apps/web/tailwind.config.ts:/app/apps/web/tailwind.config.ts
+      - ./apps/web/postcss.config.js:/app/apps/web/postcss.config.js
+      # Shared package source (changes require package rebuild for dist/)
+      - ./packages/types/src:/app/packages/types/src
+      - ./packages/core/src:/app/packages/core/src
+      - ./packages/data/src:/app/packages/data/src
+      - ./packages/ui/src:/app/packages/ui/src
+      # Reference data (read-only)
+      - ./data/reference:/app/data/reference:ro
+      # Persist saved analyses across restarts
+      - fatigue-analyses:/app/data/analyses
+      # Config files
       - ./tsconfig.base.json:/app/tsconfig.base.json
-      # Node modules are already in the image, don't override
-    command: >
-      sh -c "pnpm install --frozen-lockfile && pnpm dev"
+      - ./.eslintrc.json:/app/.eslintrc.json
+      - ./.prettierrc:/app/.prettierrc
+    command: sh -c "pnpm dev"
