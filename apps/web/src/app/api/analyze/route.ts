@@ -27,19 +27,22 @@ import { type NextRequest, NextResponse } from 'next/server';
 
 import type {
   FEMAnalysisResult,
+  NodeCoordinates,
   StressComponent,
+  Visualization3DData,
 } from '@fatigue/types';
 
 import { analyzeFEMData, generateHaighDiagramData } from '@fatigue/core';
-import { loadFEMNodeStress } from '@fatigue/data';
+import { loadFEMNodeStress, parseCoordinatesCSV } from '@fatigue/data';
 
 import {
+  buildVisualization3D,
   selectWorstPoints,
   sanitizeAllMinSF,
   type HaighLines,
   type ComponentHaighData,
 } from '@/lib/analysis-helpers';
-import { setParsedData } from '@/lib/parsed-data-cache';
+import { getParsedData, setParsedData } from '@/lib/parsed-data-cache';
 import {
   buildCacheKey,
   createSessionCache,
@@ -51,6 +54,9 @@ import {
 
 /** Maximum number of scatter points per stress component. */
 const MAX_SCATTER_POINTS = 10_000;
+
+/** Maximum number of worst nodes per component in the 3D visualization. */
+const MAX_3D_POINTS = 10_000;
 
 /** All stress components to pre-compute. */
 const ALL_COMPONENTS: readonly StressComponent[] = ['VON', 'P1', 'P2', 'P3'] as const;
@@ -101,8 +107,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       console.log(`[api/analyze] Session ${sessionId.slice(0, 8)}… — using cached result`);
     }
 
+    // Parsed data (including coordinates) is cached independently of the
+    // analysis result, so it's always available once computeAnalysis has run.
+    const coordinates = getParsedData(sessionId)?.coordinates ?? null;
+
     const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
-    const json = buildResponse(result, elapsed);
+    const json = buildResponse(result, elapsed, coordinates);
 
     const response = NextResponse.json(json);
     applySessionCookie(response, setCookieHeader);
@@ -131,6 +141,10 @@ async function computeAnalysis(sessionId: string): Promise<FEMAnalysisResult> {
   const projectRoot = path.join(process.cwd(), '../..');
   const basePath = path.join(projectRoot, 'data/reference/base/Base_Case.csv');
   const loadPath = path.join(projectRoot, 'data/reference/load/Running_Ex_CD.csv');
+  const coordsPath = path.join(
+    projectRoot,
+    'data/reference/coordinates/Lower_Car_ASSY-Base Case_coordinates.csv',
+  );
 
   console.log(`[api/analyze] Base file: ${basePath}`);
   console.log(`[api/analyze] Load file: ${loadPath}`);
@@ -139,8 +153,20 @@ async function computeAnalysis(sessionId: string): Promise<FEMAnalysisResult> {
   const nodes = await loadFEMNodeStress(basePath, loadPath);
   console.log(`[api/analyze] Loaded ${nodes.length} nodes`);
 
+  // Parse node coordinates for 3D visualization (best-effort — reference
+  // dataset ships a coordinates file, but don't fail the whole analysis
+  // if it's missing or unreadable).
+  let coordinates: readonly NodeCoordinates[] | null = null;
+  try {
+    coordinates = await parseCoordinatesCSV(coordsPath);
+    console.log(`[api/analyze] Loaded ${coordinates.length} node coordinates`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.warn(`[api/analyze] Could not load coordinates file: ${message}`);
+  }
+
   // Cache parsed data for recompute (material-independent)
-  setParsedData(sessionId, { nodes, coordinates: null });
+  setParsedData(sessionId, { nodes, coordinates });
 
   // Run full analysis
   const result = analyzeFEMData(nodes, MATERIAL);
@@ -160,6 +186,8 @@ interface AnalysisResponse {
   readonly haighLines: HaighLines;
   /** Pre-computed worst-10k scatter points per stress component */
   readonly haighPointsByComponent: Record<StressComponent, ComponentHaighData>;
+  /** 3D visualization data, present when node coordinates were available */
+  readonly visualization3D: Visualization3DData | null;
 }
 
 // -- Response Builder ---------------------------------------------------------
@@ -167,6 +195,7 @@ interface AnalysisResponse {
 function buildResponse(
   result: FEMAnalysisResult,
   elapsed: string,
+  coordinates: readonly NodeCoordinates[] | null,
 ): AnalysisResponse {
   // Generate Haigh diagram for the first component to extract the failure lines
   // (lines are identical for all components — they only depend on material)
@@ -209,6 +238,15 @@ function buildResponse(
     };
   }
 
+  // Build 3D visualization data if coordinates were available
+  const coordMap = coordinates
+    ? new Map(coordinates.map((c) => [c.nodeId, c]))
+    : null;
+
+  const visualization3D = coordMap
+    ? buildVisualization3D(coordMap, result.safetyFactors, MAX_3D_POINTS)
+    : null;
+
   return {
     material: MATERIAL,
     nodeCount: result.nodeCount,
@@ -216,5 +254,6 @@ function buildResponse(
     minSafetyFactors: sanitizeAllMinSF(result.minSafetyFactors),
     haighLines,
     haighPointsByComponent,
+    visualization3D,
   };
 }

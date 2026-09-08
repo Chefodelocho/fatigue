@@ -31,6 +31,56 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Reference Example Section */}
+      <div className="mx-auto mt-16 max-w-4xl">
+        <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-amber-100 text-amber-600">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                Try the Demo
+              </h2>
+              <p className="text-sm text-gray-500">
+                Explore a pre-computed analysis of a real automotive lower control arm FEM model
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="rounded-lg bg-gray-50 p-4 text-center">
+              <dt className="text-xs font-medium text-gray-500">Nodes Analyzed</dt>
+              <dd className="mt-1 text-2xl font-bold text-gray-900">931,978</dd>
+            </div>
+            <div className="rounded-lg bg-gray-50 p-4 text-center">
+              <dt className="text-xs font-medium text-gray-500">Stress Components</dt>
+              <dd className="mt-1 text-2xl font-bold text-gray-900">4</dd>
+              <dd className="text-xs text-gray-400">VON · P1 · P2 · P3</dd>
+            </div>
+            <div className="rounded-lg bg-gray-50 p-4 text-center">
+              <dt className="text-xs font-medium text-gray-500">Correction Methods</dt>
+              <dd className="mt-1 text-2xl font-bold text-gray-900">3</dd>
+              <dd className="text-xs text-gray-400">Goodman · Gerber · Soderberg</dd>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <Link
+              href="/analysis"
+              className="inline-flex items-center gap-2 rounded-md bg-fatigue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-fatigue-500"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
+              </svg>
+              Run Demo & See Results
+            </Link>
+          </div>
+        </div>
+      </div>
+
       {/* Feature Cards */}
       <div className="mx-auto mt-20 grid max-w-4xl grid-cols-1 gap-8 sm:grid-cols-2">
         <FeatureCard
@@ -138,56 +188,6 @@ export default function Home() {
             <span className="inline-flex items-center rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-500">
               ◻ SimScale — Planned
             </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Reference Example Section */}
-      <div className="mx-auto mt-10 max-w-4xl">
-        <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-amber-100 text-amber-600">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">
-                Try the Demo
-              </h2>
-              <p className="text-sm text-gray-500">
-                Explore a pre-computed analysis of a real automotive lower control arm FEM model
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="rounded-lg bg-gray-50 p-4 text-center">
-              <dt className="text-xs font-medium text-gray-500">Nodes Analyzed</dt>
-              <dd className="mt-1 text-2xl font-bold text-gray-900">931,978</dd>
-            </div>
-            <div className="rounded-lg bg-gray-50 p-4 text-center">
-              <dt className="text-xs font-medium text-gray-500">Stress Components</dt>
-              <dd className="mt-1 text-2xl font-bold text-gray-900">4</dd>
-              <dd className="text-xs text-gray-400">VON · P1 · P2 · P3</dd>
-            </div>
-            <div className="rounded-lg bg-gray-50 p-4 text-center">
-              <dt className="text-xs font-medium text-gray-500">Correction Methods</dt>
-              <dd className="mt-1 text-2xl font-bold text-gray-900">3</dd>
-              <dd className="text-xs text-gray-400">Goodman · Gerber · Soderberg</dd>
-            </div>
-          </div>
-
-          <div className="mt-6">
-            <Link
-              href="/analysis"
-              className="inline-flex items-center gap-2 rounded-md bg-fatigue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-fatigue-500"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
-              </svg>
-              Run Demo & See Results
-            </Link>
           </div>
         </div>
       </div>
