@@ -1,22 +1,25 @@
 /**
- * API route for FEM fatigue analysis (reference dataset).
+ * API route for FEM fatigue analysis (reference "demo" dataset).
  *
  * Reads CSV files from the reference data directory, runs the full
  * analysis pipeline (CSV parsing → stress pair computation → safety
- * factors → Haigh diagram), and returns the result as JSON.
+ * factors → Haigh diagram → 3D visualization), and returns the result
+ * as JSON.
  *
- * Results are cached PER SESSION using a `fatigue-session-id` cookie
- * so that different browser sessions get isolated caches. This is
- * essential when deployed behind Docker with multiple users sharing
- * the same server process.
+ * The reference dataset and material are fixed constants, so the result
+ * is computed ONCE across the server process's lifetime and reused by
+ * every request from every session afterwards — see `demo-analysis-cache.ts`.
+ * This is what lets the home page's "Run Demo & See Results" button jump
+ * straight to results without a multi-second wait on every visit.
  *
  * Pre-computes Haigh diagram scatter points for ALL four stress
  * components (VON, P1, P2, P3) in a single request so the frontend
  * can switch components instantly without re-fetching.
  *
- * The parsed FEM data is also cached (material-independent) so that
- * the `/api/recompute` endpoint can quickly re-run the analysis when
- * the user changes material properties.
+ * Each session's parsed FEM data is also cached (material-independent) so
+ * that the `/api/recompute` endpoint can quickly re-run the analysis when
+ * the user changes material properties, and `/api/visualization3d-full`
+ * can build the HD (all-nodes) 3D dataset on demand.
  *
  * @module api/analyze
  */
@@ -42,10 +45,10 @@ import {
   type HaighLines,
   type ComponentHaighData,
 } from '@/lib/analysis-helpers';
-import { getParsedData, setParsedData } from '@/lib/parsed-data-cache';
+import { setParsedData } from '@/lib/parsed-data-cache';
+import { setAnalysisResult } from '@/lib/analysis-result-cache';
+import { getOrComputeDemoAnalysis, type DemoAnalysisCacheEntry } from '@/lib/demo-analysis-cache';
 import {
-  buildCacheKey,
-  createSessionCache,
   getOrCreateSessionId,
   applySessionCookie,
 } from '@/lib/session-cookie';
@@ -68,55 +71,39 @@ const MATERIAL = {
   enduranceLimit: 250,
 } as const;
 
-// -- Session-scoped cache -----------------------------------------------------
-
-/**
- * In-memory cache keyed by session ID.
- *
- * Each browser session gets its own cached result so that recomputation
- * is avoided while ensuring cross-session isolation. Entries expire
- * after 2 hours of inactivity.
- */
-const analysisCache = createSessionCache<FEMAnalysisResult>();
-
 // -- Route Handler ------------------------------------------------------------
 
 /**
  * GET /api/analyze
  *
  * Runs the full FEM fatigue analysis and returns results for ALL stress
- * components in a single response. Results are cached per session based
- * on the `fatigue-session-id` cookie.
+ * components in a single response.
+ *
+ * The reference dataset + material are fixed, so the underlying computation
+ * (CSV parse → safety factors → Haigh diagram → 3D visualization) only ever
+ * runs ONCE across the server's lifetime — see `demo-analysis-cache.ts`.
+ * Every request (from any session) after the first reuses that exact stored
+ * result. Each session still gets its own parsed-data/result cache entries
+ * populated (cheap — just a Map write) so `/api/recompute` and
+ * `/api/visualization3d-full` keep working correctly per session.
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const startTime = performance.now();
-
   try {
     // Resolve session ID from cookie (generates one if absent)
     const { sessionId, setCookieHeader } = getOrCreateSessionId(request);
-    const cacheKey = buildCacheKey('analyze', sessionId);
 
-    // Check session-scoped cache
-    let result = analysisCache.get(cacheKey);
+    const { nodes, coordinates, result, response } = await getOrComputeDemoAnalysis(() =>
+      computeAnalysis(),
+    );
 
-    if (!result) {
-      console.log(`[api/analyze] Session ${sessionId.slice(0, 8)}… — computing fresh result`);
-      result = await computeAnalysis(sessionId);
-      analysisCache.set(cacheKey, result);
-    } else {
-      console.log(`[api/analyze] Session ${sessionId.slice(0, 8)}… — using cached result`);
-    }
+    // Populate this session's caches so recompute + HD-full endpoints work,
+    // even though the underlying computation was reused from the global cache.
+    setParsedData(sessionId, { nodes, coordinates });
+    setAnalysisResult(sessionId, result);
 
-    // Parsed data (including coordinates) is cached independently of the
-    // analysis result, so it's always available once computeAnalysis has run.
-    const coordinates = getParsedData(sessionId)?.coordinates ?? null;
-
-    const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
-    const json = buildResponse(result, elapsed, coordinates);
-
-    const response = NextResponse.json(json);
-    applySessionCookie(response, setCookieHeader);
-    return response;
+    const nextResponse = NextResponse.json(response);
+    applySessionCookie(nextResponse, setCookieHeader);
+    return nextResponse;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('[api/analyze] Error:', message);
@@ -131,11 +118,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 // -- Analysis Computation -----------------------------------------------------
 
 /**
- * Performs the full FEM analysis pipeline (no caching).
- * Also caches the parsed node data for recompute support.
+ * Performs the full FEM analysis pipeline: CSV parsing, coordinate parsing,
+ * safety-factor computation, and the final JSON response shape (Haigh
+ * diagram + 3D visualization data). Called at most once per server process
+ * — see `getOrComputeDemoAnalysis`.
  */
-async function computeAnalysis(sessionId: string): Promise<FEMAnalysisResult> {
-  console.log('[api/analyze] Loading CSV files and running analysis...');
+async function computeAnalysis(): Promise<DemoAnalysisCacheEntry> {
+  const startTime = performance.now();
+  console.log('[api/analyze] No cached demo result yet — loading CSV files and running analysis...');
 
   // Resolve file paths relative to the monorepo root
   const projectRoot = path.join(process.cwd(), '../..');
@@ -165,14 +155,19 @@ async function computeAnalysis(sessionId: string): Promise<FEMAnalysisResult> {
     console.warn(`[api/analyze] Could not load coordinates file: ${message}`);
   }
 
-  // Cache parsed data for recompute (material-independent)
-  setParsedData(sessionId, { nodes, coordinates });
-
   // Run full analysis
   const result = analyzeFEMData(nodes, MATERIAL);
   console.log('[api/analyze] Analysis complete');
 
-  return result;
+  const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+  const response = buildResponse(result, elapsed, coordinates);
+
+  console.log(
+    `[api/analyze] Computed and cached process-wide in ${elapsed}s — ` +
+      'all future requests (any session) will reuse this instantly',
+  );
+
+  return { nodes, coordinates, result, response };
 }
 
 // -- Response Types -----------------------------------------------------------

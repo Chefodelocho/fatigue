@@ -3,10 +3,15 @@
  *
  * Three-step workflow:
  * 1. Configure: Select material and upload CSV files (+ optional coordinates)
- *    — Or click "Load Reference Example" to skip straight to pre-computed results
  * 2. Analyze: Run the fatigue analysis
  * 3. Results: View Haigh diagram, safety factors, and optional 3D visualization
  *    — Change material and recompute without re-uploading files
+ *
+ * Visiting `/analysis?demo=true` (linked from the home page's "Run Demo &
+ * See Results" button) skips the configure step entirely and loads the
+ * pre-computed reference example results immediately — the reference
+ * dataset is cached process-wide server-side, so this is fast even on a
+ * fresh session (see `/api/analyze` and `demo-analysis-cache.ts`).
  *
  * The API pre-computes Haigh diagram data for ALL four stress components
  * (VON, P1, P2, P3) in a single request. Switching components is instant
@@ -15,15 +20,16 @@
  * When a coordinates file is uploaded, the API also returns 3D visualization
  * data showing the spatial distribution of safety factors.
  *
- * Includes analysis history sidebar for reloading past analyses (server-side
- * persistence via `/api/analyses`).
+ * Includes analysis history sidebar for reloading past analyses. Saved
+ * analyses persist server-side via `/api/analyses`, but are scoped to the
+ * current browser session using an HTTP-only session cookie.
  *
  * @module app/analysis/page
  */
 
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type {
   HaighDiagramData,
@@ -32,6 +38,7 @@ import type {
   NodeSafetyFactors,
   StressComponent,
   Visualization3DData,
+  Visualization3DFullData,
 } from '@fatigue/types';
 
 import type { MaterialConfig, AnalysisHistoryEntry } from '@/lib/analysis-store';
@@ -115,6 +122,14 @@ export default function AnalysisPage(): JSX.Element {
   const [recomputeMaterial, setRecomputeMaterial] = useState<MaterialConfig | null>(null);
   const [isRecomputing, setIsRecomputing] = useState(false);
 
+  // HD / Detail 3D visualization state — loads ALL matched nodes for the
+  // current component on demand (opt-in, since it can be 500K+ nodes).
+  // Cached per component so switching back and forth doesn't re-fetch.
+  const [hdMode, setHdMode] = useState(false);
+  const [hdCache, setHdCache] = useState<Partial<Record<StressComponent, Visualization3DFullData>>>({});
+  const [hdLoading, setHdLoading] = useState(false);
+  const [hdError, setHdError] = useState<string | null>(null);
+
   // Derived: can we run the analysis?
   const canAnalyze = material !== null && files !== null;
 
@@ -149,12 +164,112 @@ export default function AnalysisPage(): JSX.Element {
     };
   }, [data, component, sfThreshold]);
 
+  // HD dataset for the current component, split by the SF threshold slider:
+  // nodes at/below the threshold are the color-coded "critical" set (same as
+  // before); nodes above it are kept as a translucent grey "background" set
+  // so the user can still see the full model shape — just like the default
+  // (non-HD) view's sampled background trace, except this includes EVERY
+  // above-threshold node instead of a 40K sample.
+  const { hdCriticalData, hdBackgroundData } = useMemo((): {
+    hdCriticalData: Visualization3DFullData | null;
+    hdBackgroundData: Visualization3DFullData | null;
+  } => {
+    const raw = hdCache[component];
+    if (!raw) return { hdCriticalData: null, hdBackgroundData: null };
+
+    const critical = { nodeIds: [] as number[], x: [] as number[], y: [] as number[], z: [] as number[], minSF: [] as number[] };
+    const background = { nodeIds: [] as number[], x: [] as number[], y: [] as number[], z: [] as number[], minSF: [] as number[] };
+
+    for (let i = 0; i < raw.minSF.length; i++) {
+      const sf = raw.minSF[i];
+      const nodeId = raw.nodeIds[i];
+      const px = raw.x[i];
+      const py = raw.y[i];
+      const pz = raw.z[i];
+      if (
+        sf === undefined ||
+        nodeId === undefined ||
+        px === undefined ||
+        py === undefined ||
+        pz === undefined
+      ) {
+        continue;
+      }
+      const bucket = sf <= sfThreshold ? critical : background;
+      bucket.nodeIds.push(nodeId);
+      bucket.x.push(px);
+      bucket.y.push(py);
+      bucket.z.push(pz);
+      bucket.minSF.push(sf);
+    }
+
+    return {
+      hdCriticalData: { component: raw.component, totalMatchedNodes: critical.nodeIds.length, ...critical },
+      hdBackgroundData: { component: raw.component, totalMatchedNodes: background.nodeIds.length, ...background },
+    };
+  }, [hdCache, component, sfThreshold]);
+
   // Current component's total point count (for display)
   const currentTotalPoints = data?.haighPointsByComponent[component]?.totalPoints ?? 0;
   const currentPointCount = currentHaighData?.points.length ?? 0;
-  const current3DPointCount = filtered3DData?.worstNodes.length ?? 0;
+  const current3DPointCount =
+    hdMode && hdCriticalData ? hdCriticalData.totalMatchedNodes : filtered3DData?.worstNodes.length ?? 0;
 
   // -- Handlers ---------------------------------------------------------------
+
+  /**
+   * Fetches the full-detail ("HD") 3D dataset for one stress component —
+   * every matched node, color-coded by safety factor. Cached client-side
+   * per component so re-toggling or switching back doesn't re-fetch.
+   */
+  const fetchHDData = useCallback(async (comp: StressComponent) => {
+    setHdLoading(true);
+    setHdError(null);
+
+    try {
+      const response = await fetch(`/api/visualization3d-full?component=${comp}`);
+
+      if (!response.ok) {
+        const body = (await response.json()) as { error?: string; details?: string };
+        throw new Error(body.details ?? body.error ?? `HTTP ${response.status}`);
+      }
+
+      const result = (await response.json()) as Visualization3DFullData;
+      setHdCache((prev) => ({ ...prev, [comp]: result }));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setHdError(message);
+      setHdMode(false);
+    } finally {
+      setHdLoading(false);
+    }
+  }, []);
+
+  /** Toggles HD / Detail mode, fetching the dataset for the current component if needed. */
+  const handleToggleHD = useCallback(() => {
+    setHdMode((prev) => {
+      const next = !prev;
+      if (next && !hdCache[component]) {
+        void fetchHDData(component);
+      }
+      return next;
+    });
+  }, [hdCache, component, fetchHDData]);
+
+  // While HD mode is on, fetch the dataset whenever the user switches to a
+  // component that hasn't been loaded yet.
+  useEffect(() => {
+    if (hdMode && data?.visualization3D && !hdCache[component] && !hdLoading) {
+      void fetchHDData(component);
+    }
+  }, [hdMode, component, hdCache, data, hdLoading, fetchHDData]);
+
+  /** Clears HD mode/cache — called whenever a fresh analysis result is loaded. */
+  const resetHDState = useCallback(() => {
+    setHdMode(false);
+    setHdCache({});
+    setHdError(null);
+  }, []);
 
   const handleRunAnalysis = useCallback(async () => {
     if (!material || !files) return;
@@ -185,6 +300,7 @@ export default function AnalysisPage(): JSX.Element {
       setData(result);
       setRecomputeMaterial(material);
       setStep('results');
+      resetHDState();
 
       // Save to server-side history
       const historyId = generateAnalysisId();
@@ -228,6 +344,7 @@ export default function AnalysisPage(): JSX.Element {
       setRecomputeMaterial(REFERENCE_MATERIAL);
       setData(result);
       setStep('results');
+      resetHDState();
 
       // Save to server-side history
       const historyId = generateAnalysisId();
@@ -250,6 +367,22 @@ export default function AnalysisPage(): JSX.Element {
     }
   }, []);
 
+  // Auto-load the demo results when arriving via `/analysis?demo=true`
+  // (the home page's "Run Demo & See Results" button) — skips the configure
+  // step entirely instead of requiring a second click on this page. Guarded
+  // by a ref so it only fires once per page load, even if the user later
+  // clicks "New Analysis" and `step` resets to 'configure'.
+  const demoAutoLoadTriggered = useRef(false);
+  useEffect(() => {
+    if (demoAutoLoadTriggered.current) return;
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('demo') === 'true') {
+      demoAutoLoadTriggered.current = true;
+      void handleLoadReference();
+    }
+  }, [handleLoadReference]);
+
   /**
    * Load a past analysis from server-side history.
    */
@@ -260,6 +393,7 @@ export default function AnalysisPage(): JSX.Element {
       setRecomputeMaterial(entry.material);
       setData(savedData as AnalysisData);
       setStep('results');
+      resetHDState();
     }
   }, []);
 
@@ -270,6 +404,7 @@ export default function AnalysisPage(): JSX.Element {
     setFiles(null);
     setMaterial(null);
     setRecomputeMaterial(null);
+    resetHDState();
   };
 
   /** Switch component instantly — all data is pre-computed. */
@@ -307,6 +442,7 @@ export default function AnalysisPage(): JSX.Element {
       const result = (await response.json()) as AnalysisData;
       setMaterial(recomputeMaterial);
       setData(result);
+      resetHDState();
 
       // Save recomputed result as new history entry
       const historyId = generateAnalysisId();
@@ -342,7 +478,7 @@ export default function AnalysisPage(): JSX.Element {
           </h1>
           <p className="mt-2 text-sm text-gray-600">
             Upload FEM data from SolidWorks Simulation, select a material, and run
-            Goodman/Gerber/Soderberg analysis. Or try the pre-computed reference example.
+            Goodman/Gerber/Soderberg analysis.
           </p>
         </div>
         {step === 'results' && (
@@ -414,45 +550,6 @@ export default function AnalysisPage(): JSX.Element {
                 )}
               </div>
 
-              {/* Divider */}
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-200" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-gray-50 px-2 text-gray-400">or</span>
-                </div>
-              </div>
-
-              {/* Reference Example Button */}
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-5 shadow-sm">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-amber-100 text-amber-600">
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-sm font-semibold text-gray-900">
-                      Try the Reference Example
-                    </h3>
-                    <p className="mt-1 text-xs leading-relaxed text-gray-600">
-                      Load a pre-computed analysis of a real automotive lower control arm FEM model
-                      (931,978 nodes) with steel material properties. No files needed.
-                    </p>
-                    <button
-                      onClick={() => void handleLoadReference()}
-                      className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-amber-500"
-                    >
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
-                      </svg>
-                      Load Reference Example
-                    </button>
-                  </div>
-                </div>
-              </div>
-
               {/* Error */}
               {error && (
                 <div className="rounded-lg border border-red-200 bg-red-50 p-4">
@@ -480,78 +577,6 @@ export default function AnalysisPage(): JSX.Element {
           {/* Results */}
           {step === 'results' && data && (
             <div className="space-y-6">
-              {/* Material Change Card */}
-              <div className="rounded-lg border border-blue-200 bg-blue-50 p-5 shadow-sm">
-                <div className="flex items-center gap-2 mb-3">
-                  <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
-                  </svg>
-                  <h3 className="text-sm font-semibold text-gray-700">
-                    Change Material & Recompute
-                  </h3>
-                </div>
-                <p className="text-xs text-gray-500 mb-3">
-                  Select a different material to instantly recompute safety factors without re-uploading files.
-                </p>
-                <div className="flex items-end gap-4">
-                  <div className="flex-1">
-                    <MaterialSelector
-                      value={recomputeMaterial}
-                      onChange={setRecomputeMaterial}
-                    />
-                  </div>
-                  <button
-                    onClick={() => void handleRecompute()}
-                    disabled={isRecomputing || !recomputeMaterial}
-                    className={`rounded-md px-5 py-2.5 text-sm font-semibold shadow-sm transition-colors whitespace-nowrap ${
-                      isRecomputing
-                        ? 'cursor-not-allowed bg-gray-300 text-gray-500'
-                        : 'bg-blue-600 text-white hover:bg-blue-500'
-                    }`}
-                  >
-                    {isRecomputing ? 'Recomputing…' : 'Update Analysis'}
-                  </button>
-                </div>
-                {error && (
-                  <p className="mt-2 text-xs text-red-600">{error}</p>
-                )}
-              </div>
-
-              {/* Summary Card */}
-              <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
-                  Analysis Summary
-                </h2>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-                  <PropertyBadge
-                    label="Material"
-                    value={material?.name ?? 'Unknown'}
-                  />
-                  <PropertyBadge
-                    label="Nodes Analyzed"
-                    value={data.nodeCount.toLocaleString()}
-                  />
-                  <PropertyBadge
-                    label="Compute Time"
-                    value={`${data.computeTimeSeconds}s`}
-                  />
-                  <PropertyBadge
-                    label="Worst Min SF"
-                    value={Math.min(
-                      data.minSafetyFactors.VON.minSF,
-                      data.minSafetyFactors.P1.minSF,
-                      data.minSafetyFactors.P2.minSF,
-                      data.minSafetyFactors.P3.minSF,
-                    ).toFixed(3)}
-                  />
-                </div>
-                <div className="mt-3 flex gap-4 text-xs text-gray-500">
-                  <span>σu = {data.material.ultimateStrength} MPa</span>
-                  <span>σy = {data.material.yieldStrength} MPa</span>
-                  <span>σe = {data.material.enduranceLimit} MPa</span>
-                </div>
-              </div>
-
               {/* Stress Component Selector */}
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -621,9 +646,49 @@ export default function AnalysisPage(): JSX.Element {
               {/* 3D Safety Factor Visualization */}
               {data.visualization3D && (
                 <section>
-                  <h2 className="mb-4 text-lg font-semibold text-gray-900">
-                    3D Safety Factor Map
-                  </h2>
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      3D Safety Factor Map
+                    </h2>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={handleToggleHD}
+                        disabled={hdLoading}
+                        title="Load and render every matched node (500K+), color-coded by safety factor. Slower to fetch and render than the default view."
+                        className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                          hdMode
+                            ? 'bg-fatigue-600 text-white hover:bg-fatigue-500'
+                            : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {hdLoading ? (
+                          <>
+                            <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                            Loading…
+                          </>
+                        ) : (
+                          <>{hdMode ? '✓ HD / Detail' : 'HD / Detail Mode'}</>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  {hdError && (
+                    <p className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                      Could not load HD dataset: {hdError}
+                    </p>
+                  )}
+                  {hdMode && (
+                    <p className="mb-3 text-xs text-amber-600">
+                      HD / Detail mode renders every matched node (
+                      {data.visualization3D.matchedNodeCount.toLocaleString()} total) instead of the
+                      default worst-10K + sampled-background view. Fetching and rotating may be
+                      noticeably slower, especially on lower-end devices.
+                    </p>
+                  )}
                   <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
                     <Scatter3DChart
                       data={filtered3DData ?? data.visualization3D.worstByComponent[component]}
@@ -631,6 +696,10 @@ export default function AnalysisPage(): JSX.Element {
                       component={component}
                       matchedNodeCount={data.visualization3D.matchedNodeCount}
                       backgroundCoordinates={data.visualization3D.backgroundCoordinates}
+                      hdMode={hdMode}
+                      hdData={hdMode ? hdCriticalData : null}
+                      hdBackgroundData={hdMode ? hdBackgroundData : null}
+                      hdLoading={hdMode && hdLoading}
                     />
                   </div>
                 </section>
@@ -643,6 +712,78 @@ export default function AnalysisPage(): JSX.Element {
                 </h2>
                 <SafetyFactorTable minSafetyFactors={data.minSafetyFactors} />
               </section>
+
+              {/* Summary Card */}
+              <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
+                  Analysis Summary
+                </h2>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+                  <PropertyBadge
+                    label="Material"
+                    value={material?.name ?? 'Unknown'}
+                  />
+                  <PropertyBadge
+                    label="Nodes Analyzed"
+                    value={data.nodeCount.toLocaleString()}
+                  />
+                  <PropertyBadge
+                    label="Compute Time"
+                    value={`${data.computeTimeSeconds}s`}
+                  />
+                  <PropertyBadge
+                    label="Worst Min SF"
+                    value={Math.min(
+                      data.minSafetyFactors.VON.minSF,
+                      data.minSafetyFactors.P1.minSF,
+                      data.minSafetyFactors.P2.minSF,
+                      data.minSafetyFactors.P3.minSF,
+                    ).toFixed(3)}
+                  />
+                </div>
+                <div className="mt-3 flex gap-4 text-xs text-gray-500">
+                  <span>σu = {data.material.ultimateStrength} MPa</span>
+                  <span>σy = {data.material.yieldStrength} MPa</span>
+                  <span>σe = {data.material.enduranceLimit} MPa</span>
+                </div>
+              </div>
+
+              {/* Material Change Card */}
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-5 shadow-sm">
+                <div className="flex items-center gap-2 mb-3">
+                  <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
+                  </svg>
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    Change Material & Recompute
+                  </h3>
+                </div>
+                <p className="text-xs text-gray-500 mb-3">
+                  Select a different material to instantly recompute safety factors without re-uploading files.
+                </p>
+                <div className="flex items-end gap-4">
+                  <div className="flex-1">
+                    <MaterialSelector
+                      value={recomputeMaterial}
+                      onChange={setRecomputeMaterial}
+                    />
+                  </div>
+                  <button
+                    onClick={() => void handleRecompute()}
+                    disabled={isRecomputing || !recomputeMaterial}
+                    className={`rounded-md px-5 py-2.5 text-sm font-semibold shadow-sm transition-colors whitespace-nowrap ${
+                      isRecomputing
+                        ? 'cursor-not-allowed bg-gray-300 text-gray-500'
+                        : 'bg-blue-600 text-white hover:bg-blue-500'
+                    }`}
+                  >
+                    {isRecomputing ? 'Recomputing…' : 'Update Analysis'}
+                  </button>
+                </div>
+                {error && (
+                  <p className="mt-2 text-xs text-red-600">{error}</p>
+                )}
+              </div>
             </div>
           )}
         </div>

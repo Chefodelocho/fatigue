@@ -35,6 +35,11 @@ interface MaterialSelectorProps {
 export default function MaterialSelector({ value, onChange, disabled }: MaterialSelectorProps) {
   const [mode, setMode] = useState<'preset' | 'custom'>(value?.isCustom ? 'custom' : 'preset');
   const [groupFilter, setGroupFilter] = useState<string>('all');
+  // Standard steels list starts folded once a material is already selected
+  // (e.g. on the results page) to save space; stays open by default when
+  // nothing is selected yet (e.g. the initial configure step) so first-time
+  // selection isn't hidden behind an extra click.
+  const [isPresetListOpen, setIsPresetListOpen] = useState<boolean>(!value);
   const [custom, setCustom] = useState<MaterialConfig>(
     value?.isCustom
       ? value
@@ -123,58 +128,86 @@ export default function MaterialSelector({ value, onChange, disabled }: Material
       {/* Preset Material Selection */}
       {mode === 'preset' && (
         <div>
-          {/* Group Filter */}
-          <div className="mb-3">
-            <select
-              value={groupFilter}
-              onChange={(e) => setGroupFilter(e.target.value)}
-              disabled={disabled}
-              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-fatigue-500 focus:ring-1 focus:ring-fatigue-500"
+          {/* Fold/unfold toggle */}
+          <button
+            type="button"
+            onClick={() => setIsPresetListOpen((open) => !open)}
+            disabled={disabled}
+            className={`mb-3 flex w-full items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-100 ${
+              disabled ? 'cursor-not-allowed opacity-50' : ''
+            }`}
+            aria-expanded={isPresetListOpen}
+          >
+            <span>Standard Steels List ({filteredMaterials.length})</span>
+            <svg
+              className={`h-4 w-4 shrink-0 text-gray-500 transition-transform ${
+                isPresetListOpen ? 'rotate-180' : ''
+              }`}
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
             >
-              <option value="all">All Groups</option>
-              {groups.map((g) => (
-                <option key={g} value={g}>
-                  {g}
-                </option>
-              ))}
-            </select>
-          </div>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
+          </button>
 
-          {/* Material Grid */}
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredMaterials.map((mat) => (
-              <button
-                key={mat.id}
-                onClick={() => handlePresetSelect(mat)}
-                disabled={disabled}
-                className={`rounded-lg border p-3 text-left transition-colors ${
-                  value?.id === mat.id && !value.isCustom
-                    ? 'border-fatigue-500 bg-fatigue-50 ring-1 ring-fatigue-500'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
-              >
-                <div className="text-sm font-semibold text-gray-900">{mat.name}</div>
-                <div className="mt-1 text-xs text-gray-500">{mat.standard}</div>
-                <div className="mt-2 grid grid-cols-3 gap-1 text-xs">
-                  <div>
-                    <span className="text-gray-400">σu:</span>{' '}
-                    <span className="font-medium text-gray-700">{mat.ultimateStrength}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-400">σy:</span>{' '}
-                    <span className="font-medium text-gray-700">{mat.yieldStrength}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-400">σe:</span>{' '}
-                    <span className="font-medium text-gray-700">{mat.enduranceLimit}</span>
-                  </div>
-                </div>
-                {mat.notes && (
-                  <div className="mt-1 text-xs text-gray-400 truncate">{mat.notes}</div>
-                )}
-              </button>
-            ))}
-          </div>
+          {isPresetListOpen && (
+            <>
+              {/* Group Filter */}
+              <div className="mb-3">
+                <select
+                  value={groupFilter}
+                  onChange={(e) => setGroupFilter(e.target.value)}
+                  disabled={disabled}
+                  className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-fatigue-500 focus:ring-1 focus:ring-fatigue-500"
+                >
+                  <option value="all">All Groups</option>
+                  {groups.map((g) => (
+                    <option key={g} value={g}>
+                      {g}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Material Grid */}
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredMaterials.map((mat) => (
+                  <button
+                    key={mat.id}
+                    onClick={() => handlePresetSelect(mat)}
+                    disabled={disabled}
+                    className={`rounded-lg border p-3 text-left transition-colors ${
+                      value?.id === mat.id && !value.isCustom
+                        ? 'border-fatigue-500 bg-fatigue-50 ring-1 ring-fatigue-500'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
+                  >
+                    <div className="text-sm font-semibold text-gray-900">{mat.name}</div>
+                    <div className="mt-1 text-xs text-gray-500">{mat.standard}</div>
+                    <div className="mt-2 grid grid-cols-3 gap-1 text-xs">
+                      <div>
+                        <span className="text-gray-400">σu:</span>{' '}
+                        <span className="font-medium text-gray-700">{mat.ultimateStrength}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400">σy:</span>{' '}
+                        <span className="font-medium text-gray-700">{mat.yieldStrength}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400">σe:</span>{' '}
+                        <span className="font-medium text-gray-700">{mat.enduranceLimit}</span>
+                      </div>
+                    </div>
+                    {mat.notes && (
+                      <div className="mt-1 text-xs text-gray-400 truncate">{mat.notes}</div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
 

@@ -3,7 +3,8 @@
  *
  * Stores analysis entries as individual JSON files in `data/analyses/`.
  * This directory is volume-mounted in Docker so analyses persist across
- * container restarts and are accessible from any browser/device.
+ * container restarts, but each entry is scoped to a single browser session
+ * via the server-managed session cookie.
  *
  * @module lib/server-analysis-store
  */
@@ -26,6 +27,8 @@ export interface StoredMaterialConfig {
 
 export interface StoredAnalysisEntry {
   readonly id: string;
+  /** Owning browser session ID (server-assigned, not client-trusted). */
+  readonly sessionId?: string;
   readonly name: string;
   readonly createdAt: string;
   readonly material: StoredMaterialConfig;
@@ -69,7 +72,7 @@ function filePath(id: string): string {
  *
  * Returns entries sorted by creation date descending (newest first).
  */
-export async function listAnalyses(): Promise<readonly AnalysisMeta[]> {
+export async function listAnalyses(sessionId: string): Promise<readonly AnalysisMeta[]> {
   await ensureDir();
 
   try {
@@ -82,6 +85,9 @@ export async function listAnalyses(): Promise<readonly AnalysisMeta[]> {
       try {
         const raw = await readFile(join(STORAGE_DIR, file), 'utf-8');
         const entry = JSON.parse(raw) as StoredAnalysisEntry;
+        if (entry.sessionId !== sessionId) {
+          continue;
+        }
         entries.push({
           id: entry.id,
           name: entry.name,
@@ -121,19 +127,26 @@ export async function getAnalysis(id: string): Promise<StoredAnalysisEntry | nul
  *
  * If the total count exceeds MAX_ENTRIES, the oldest entries are evicted.
  */
-export async function saveAnalysis(entry: StoredAnalysisEntry): Promise<void> {
+export async function saveAnalysis(
+  sessionId: string,
+  entry: StoredAnalysisEntry,
+): Promise<void> {
   await ensureDir();
 
-  // Enforce max entries — evict oldest
-  const existing = await listAnalyses();
+  // Enforce max entries per browser session — evict oldest
+  const existing = await listAnalyses(sessionId);
   if (existing.length >= MAX_ENTRIES) {
     const toDelete = existing.slice(MAX_ENTRIES - 1);
     for (const old of toDelete) {
-      await deleteAnalysis(old.id);
+      await deleteAnalysis(sessionId, old.id);
     }
   }
 
-  await writeFile(filePath(entry.id), JSON.stringify(entry), 'utf-8');
+  await writeFile(
+    filePath(entry.id),
+    JSON.stringify({ ...entry, sessionId }),
+    'utf-8',
+  );
 }
 
 /**
@@ -141,8 +154,12 @@ export async function saveAnalysis(entry: StoredAnalysisEntry): Promise<void> {
  *
  * @returns `true` if the file was deleted, `false` if not found
  */
-export async function deleteAnalysis(id: string): Promise<boolean> {
+export async function deleteAnalysis(sessionId: string, id: string): Promise<boolean> {
   try {
+    const entry = await getAnalysis(id);
+    if (!entry || entry.sessionId !== sessionId) {
+      return false;
+    }
     await unlink(filePath(id));
     return true;
   } catch {

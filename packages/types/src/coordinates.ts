@@ -113,10 +113,44 @@ interface Visualization3DData {
   };
 }
 
+// -- Full-Detail ("HD") 3D Visualization Payload -------------------------------
+
+/**
+ * Full-detail 3D visualization data for a single stress component, joining
+ * EVERY matched node (not capped like {@link Component3DData}) with its
+ * safety factor.
+ *
+ * Uses a columnar (struct-of-arrays) layout instead of an array of objects
+ * to minimize JSON payload size when transferring hundreds of thousands of
+ * nodes — there are no repeated object keys, and only the fields required
+ * for rendering + hover are included.
+ *
+ * Opt-in via the "HD / Detail" view since it can contain 500K+ entries per
+ * array and is meaningfully heavier to fetch and render than the default
+ * worst-N + sampled-background view.
+ */
+interface Visualization3DFullData {
+  /** Stress component this data was computed for */
+  readonly component: StressComponent;
+  /** Total number of nodes included (length of each array below) */
+  readonly totalMatchedNodes: number;
+  /** FEM mesh node IDs, parallel to x/y/z/minSF */
+  readonly nodeIds: readonly number[];
+  /** X coordinates in mm, parallel to nodeIds */
+  readonly x: readonly number[];
+  /** Y coordinates in mm, parallel to nodeIds */
+  readonly y: readonly number[];
+  /** Z coordinates in mm, parallel to nodeIds */
+  readonly z: readonly number[];
+  /** Minimum safety factor (Goodman/Gerber/Soderberg) per node, parallel to nodeIds */
+  readonly minSF: readonly number[];
+}
+
 export type {
   NodeCoordinates,
   Node3DVizPoint,
   Component3DData,
   BoundingBox3D,
   Visualization3DData,
+  Visualization3DFullData,
 };

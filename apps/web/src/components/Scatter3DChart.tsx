@@ -18,7 +18,7 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 
 import type {
@@ -26,10 +26,17 @@ import type {
   BoundingBox3D,
   NodeCoordinates,
   StressComponent,
+  Visualization3DFullData,
 } from '@fatigue/types';
 
-// Dynamic import — Plotly.js needs browser APIs (no SSR)
-const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
+import ChartSpinner from '@/components/ChartSpinner';
+
+// Dynamic import — Plotly.js needs browser APIs (no SSR). The `loading`
+// fallback covers the (one-time) download of the Plotly.js chunk itself.
+const Plot = dynamic(() => import('react-plotly.js'), {
+  ssr: false,
+  loading: () => <ChartSpinner label="Loading chart engine…" />,
+});
 
 // -- Types -------------------------------------------------------------------
 
@@ -44,6 +51,25 @@ interface Scatter3DChartProps {
   readonly matchedNodeCount: number;
   /** Background coordinates for transparent context trace */
   readonly backgroundCoordinates: readonly NodeCoordinates[];
+  /**
+   * Whether "HD / Detail" mode is active. When `true`, `hdData` and
+   * `hdBackgroundData` REPLACE the standard worst-N + sampled-background
+   * traces with two traces covering every matched node instead.
+   */
+  readonly hdMode?: boolean;
+  /**
+   * HD nodes at/below the SF threshold — color-coded by minSF, same styling
+   * as the standard "Critical nodes" trace.
+   */
+  readonly hdData?: Visualization3DFullData | null;
+  /**
+   * HD nodes ABOVE the SF threshold — rendered translucent grey (same style
+   * as the standard sampled background trace), but includes EVERY
+   * above-threshold node instead of a 40K sample.
+   */
+  readonly hdBackgroundData?: Visualization3DFullData | null;
+  /** Whether the HD dataset is currently being fetched. */
+  readonly hdLoading?: boolean;
 }
 
 // -- Color Scale Configuration -----------------------------------------------
@@ -82,12 +108,77 @@ export default function Scatter3DChart({
   component,
   matchedNodeCount,
   backgroundCoordinates,
+  hdMode,
+  hdData,
+  hdBackgroundData,
+  hdLoading,
 }: Scatter3DChartProps) {
   const { worstNodes } = data;
+  const isHD = Boolean(hdMode);
 
   // Build Plotly data traces
   // Note: Y and Z are swapped so Y (from file) becomes the vertical axis in 3D.
   const traces = useMemo(() => {
+    // HD / Detail mode — two traces covering every matched node: a
+    // translucent grey trace for nodes above the SF threshold (same style
+    // as the standard sampled background), and a color-coded trace for
+    // nodes at/below the threshold (same style as the standard critical
+    // trace). Replaces the standard worst-N + 40K-sample traces entirely.
+    if (hdMode) {
+      const hdBgTrace =
+        hdBackgroundData && hdBackgroundData.x.length > 0
+          ? {
+              x: hdBackgroundData.x as number[],
+              y: hdBackgroundData.z as number[], // file Z → Plotly Y (depth)
+              z: hdBackgroundData.y as number[], // file Y → Plotly Z (vertical)
+              mode: 'markers' as const,
+              type: 'scatter3d' as const,
+              marker: {
+                size: 2,
+                color: 'rgb(160, 160, 170)',
+                opacity: 0.35,
+              },
+              hoverinfo: 'skip' as const,
+              name: 'Background (above threshold)',
+              showlegend: true,
+            }
+          : null;
+
+      const hdCritTrace =
+        hdData && hdData.x.length > 0
+          ? {
+              x: hdData.x as number[],
+              y: hdData.z as number[], // file Z → Plotly Y (depth)
+              z: hdData.y as number[], // file Y → Plotly Z (vertical)
+              customdata: hdData.nodeIds.map((nodeId, i) => [nodeId, hdData.minSF[i] ?? 0]),
+              hovertemplate:
+                'Node %{customdata[0]}<br>' +
+                'X: %{x:.1f} mm<br>' +
+                'Y: %{z:.1f} mm<br>' +
+                'Z: %{y:.1f} mm<br>' +
+                'Min SF: %{customdata[1]:.3f}<br>' +
+                '<extra></extra>',
+              mode: 'markers' as const,
+              type: 'scatter3d' as const,
+              marker: {
+                size: 1.5,
+                color: hdData.minSF as number[],
+                colorscale: COLOR_SCALE,
+                colorbar: {
+                  title: { text: 'Min SF', font: { size: 12 } },
+                  thickness: 15,
+                  len: 0.8,
+                },
+                showscale: true,
+              },
+              name: 'Critical nodes (HD)',
+              showlegend: true,
+            }
+          : null;
+
+      return [hdBgTrace, hdCritTrace].filter((t): t is NonNullable<typeof t> => t !== null);
+    }
+
     if (worstNodes.length === 0) return [];
 
     // Background trace — translucid grey for spatial context
@@ -144,7 +235,7 @@ export default function Scatter3DChart({
     };
 
     return [bgTrace, critTrace];
-  }, [worstNodes, backgroundCoordinates]);
+  }, [worstNodes, backgroundCoordinates, hdMode, hdData, hdBackgroundData]);
 
   // Compute axis ranges from bounding box with 5% padding.
   // Y and Z are swapped: file Y → Plotly Z (vertical), file Z → Plotly Y (depth).
@@ -198,6 +289,18 @@ export default function Scatter3DChart({
     };
   }, [bounds, component]);
 
+  // Tracks whether Plotly is still drawing/redrawing the current dataset, so
+  // we can show an overlay spinner instead of letting large point clouds
+  // (up to 500K+ in HD mode) appear to freeze the page while they render.
+  const [isRendering, setIsRendering] = useState(true);
+  useEffect(() => {
+    setIsRendering(true);
+  }, [worstNodes, backgroundCoordinates, hdMode, hdData, hdBackgroundData]);
+
+  if (hdLoading) {
+    return <ChartSpinner label={`Loading HD dataset — all ${matchedNodeCount.toLocaleString()} nodes for ${component}…`} />;
+  }
+
   if (traces.length === 0) {
     return (
       <div className="py-12 text-center text-sm text-gray-500">
@@ -209,27 +312,42 @@ export default function Scatter3DChart({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between text-xs text-gray-500">
-        <span>
-          Showing {worstNodes.length.toLocaleString()} worst nodes (of{' '}
-          {matchedNodeCount.toLocaleString()} matched) by min safety factor ·{' '}
-          {backgroundCoordinates.length.toLocaleString()} background nodes
-        </span>
+        {isHD ? (
+          <span>
+            HD / Detail mode — {(hdData?.totalMatchedNodes ?? 0).toLocaleString()} critical nodes
+            (color-coded) · {(hdBackgroundData?.totalMatchedNodes ?? 0).toLocaleString()} nodes above
+            threshold (grey) · {matchedNodeCount.toLocaleString()} total
+          </span>
+        ) : (
+          <span>
+            Showing {worstNodes.length.toLocaleString()} worst nodes (of{' '}
+            {matchedNodeCount.toLocaleString()} matched) by min safety factor ·{' '}
+            {backgroundCoordinates.length.toLocaleString()} background nodes
+          </span>
+        )}
         <span>Component: {component}</span>
       </div>
-      <Plot
-        data={traces}
-        layout={layout}
-        config={{
-          responsive: true,
-          displayModeBar: true,
-          modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
-          displaylogo: false,
-        }}
-        style={{ width: '100%', height: '600px' }}
-        useResizeHandler
-      />
+      <div className="relative">
+        {isRendering && (
+          <ChartSpinner overlay label="Rendering 3D safety factor map…" />
+        )}
+        <Plot
+          data={traces}
+          layout={layout}
+          config={{
+            responsive: true,
+            displayModeBar: true,
+            modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
+            displaylogo: false,
+          }}
+          onInitialized={() => setIsRendering(false)}
+          onUpdate={() => setIsRendering(false)}
+          style={{ width: '100%', height: '600px' }}
+          useResizeHandler
+        />
+      </div>
       <p className="mt-2 text-xs text-gray-400">
-        Drag to rotate · Scroll to zoom · Click + drag to pan · Hover critical points for details · Y = vertical axis
+        Drag to rotate · Scroll to zoom · Click + drag to pan · Hover points for details · Y = vertical axis
       </p>
     </div>
   );

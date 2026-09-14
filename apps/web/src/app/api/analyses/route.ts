@@ -1,29 +1,36 @@
 /**
  * API route for managing saved analyses (list + save).
  *
- * GET  /api/analyses  — list all saved analysis metadata
- * POST /api/analyses  — save a new analysis (metadata + full data)
+ * GET  /api/analyses  — list this session's saved analysis metadata
+ * POST /api/analyses  — save a new analysis owned by this session
  *
  * @module api/analyses
  */
 
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 
 import {
   listAnalyses,
   saveAnalysis,
   type StoredAnalysisEntry,
 } from '@/lib/server-analysis-store';
+import {
+  applySessionCookie,
+  getOrCreateSessionId,
+} from '@/lib/session-cookie';
 
 /**
  * GET /api/analyses
  *
- * Returns all saved analysis entries (metadata only, no full data).
+ * Returns the current session's saved analysis entries (metadata only, no full data).
  */
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    const entries = await listAnalyses();
-    return NextResponse.json(entries);
+    const { sessionId, setCookieHeader } = getOrCreateSessionId(request);
+    const entries = await listAnalyses(sessionId);
+    const response = NextResponse.json(entries);
+    applySessionCookie(response, setCookieHeader);
+    return response;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('[api/analyses] GET error:', message);
@@ -34,10 +41,12 @@ export async function GET(): Promise<NextResponse> {
 /**
  * POST /api/analyses
  *
- * Saves a new analysis entry (metadata + full data) to server-side storage.
+ * Saves a new analysis entry (metadata + full data) to server-side storage,
+ * stamped with the current session ID on the server.
  */
-export async function POST(request: Request): Promise<NextResponse> {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
+    const { sessionId, setCookieHeader } = getOrCreateSessionId(request);
     const body = (await request.json()) as StoredAnalysisEntry;
 
     if (!body.id || !body.name || !body.createdAt || !body.analysisData) {
@@ -47,8 +56,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       );
     }
 
-    await saveAnalysis(body);
-    return NextResponse.json({ ok: true });
+    await saveAnalysis(sessionId, body);
+    const response = NextResponse.json({ ok: true });
+    applySessionCookie(response, setCookieHeader);
+    return response;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('[api/analyses] POST error:', message);

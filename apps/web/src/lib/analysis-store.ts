@@ -2,8 +2,8 @@
  * Analysis history store — API-based persistence.
  *
  * Saves analysis metadata and results to the server via REST API
- * (`/api/analyses`) so that analyses persist across browser sessions,
- * devices, and server restarts (stored in `data/analyses/`).
+ * (`/api/analyses`) so that analyses persist across server restarts while
+ * remaining scoped to the current browser session via an HTTP-only cookie.
  *
  * Also provides a client-side `generateAnalysisId()` utility.
  *

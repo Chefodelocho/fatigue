@@ -45,6 +45,7 @@ import {
   type ComponentHaighData,
 } from '@/lib/analysis-helpers';
 import { setParsedData } from '@/lib/parsed-data-cache';
+import { setAnalysisResult } from '@/lib/analysis-result-cache';
 import {
   getOrCreateSessionId,
   applySessionCookie,
@@ -164,6 +165,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       const result = analyzeFEMData(nodes, material);
       const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+
+      // Cache the full result so /api/visualization3d-full can build the
+      // HD (all-nodes) 3D dataset on demand without recomputing.
+      setAnalysisResult(sessionId, result);
 
       // Generate Haigh diagram for VON to extract failure lines
       const firstHaigh = generateHaighDiagramData(

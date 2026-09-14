@@ -2,7 +2,7 @@
  * Analysis history component — lists previous analyses with load/delete actions.
  *
  * Fetches analysis history from the server-side store via `/api/analyses`.
- * Users can click a past analysis to reload its results.
+ * Entries are restricted to the current browser session.
  *
  * @module components/AnalysisHistory
  */

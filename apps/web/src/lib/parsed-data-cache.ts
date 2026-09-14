@@ -26,7 +26,7 @@ export interface ParsedData {
 
 // -- Internal cache (not exported to avoid cross-module private member issue) -
 
-const cache = createSessionCache<ParsedData>();
+const cache = createSessionCache<ParsedData>('parsed-data');
 
 /**
  * Builds the cache key for parsed data within a session.

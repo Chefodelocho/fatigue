@@ -68,4 +68,5 @@ export type {
   Component3DData,
   BoundingBox3D,
   Visualization3DData,
+  Visualization3DFullData,
 } from './coordinates';

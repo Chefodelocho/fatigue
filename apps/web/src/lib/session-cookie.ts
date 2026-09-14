@@ -49,6 +49,44 @@ export interface SessionCookieResult {
 
 // -- Session-scoped cache store ------------------------------------------------
 
+interface CacheEntry<V> {
+  value: V;
+  timestamp: number;
+}
+
+/**
+ * Next.js compiles each API route handler as its own separate bundle. That
+ * means a plain module-scope singleton (e.g. `const cache = new Map()`
+ * defined in a shared `lib/*.ts` file) gets a SEPARATE instance baked into
+ * every route that imports it — even though all routes run inside the same
+ * Node.js process. Two different routes reading/writing "the same" cache
+ * would silently talk to two different Maps, so cross-route caches (e.g.
+ * `/api/analyze` writing parsed data that `/api/recompute` reads) would
+ * never see each other's data.
+ *
+ * Storing the backing Map on `globalThis`, keyed by a unique cache name,
+ * sidesteps this: `globalThis` is the actual process-wide global object, so
+ * every route bundle resolves to the exact same Map regardless of which
+ * compiled copy of this module instantiated it.
+ */
+function getGlobalStore<V>(name: string): Map<string, CacheEntry<V>> {
+  const globalForCache = globalThis as unknown as {
+    __fatigueSessionCaches__?: Map<string, Map<string, CacheEntry<unknown>>>;
+  };
+
+  if (!globalForCache.__fatigueSessionCaches__) {
+    globalForCache.__fatigueSessionCaches__ = new Map();
+  }
+
+  let store = globalForCache.__fatigueSessionCaches__.get(name);
+  if (!store) {
+    store = new Map<string, CacheEntry<unknown>>();
+    globalForCache.__fatigueSessionCaches__.set(name, store);
+  }
+
+  return store as Map<string, CacheEntry<V>>;
+}
+
 /**
  * A simple in-memory cache keyed by session ID.
  *
@@ -57,7 +95,11 @@ export interface SessionCookieResult {
  * Entries older than {@link SESSION_CACHE_TTL} are evicted lazily.
  */
 class SessionCache<V> {
-  private readonly _store = new Map<string, { value: V; timestamp: number }>();
+  private readonly _store: Map<string, CacheEntry<V>>;
+
+  constructor(name: string) {
+    this._store = getGlobalStore<V>(name);
+  }
 
   /**
    * Retrieves a cached value for the given session ID.
@@ -97,12 +139,14 @@ class SessionCache<V> {
 // -- Public API ----------------------------------------------------------------
 
 /**
- * Creates a new session-scoped cache instance.
- * Use one per cache domain (e.g., one for `api/analyze`, one for
- * `api/analyze-upload`).
+ * Creates a session-scoped cache instance backed by a process-wide store.
+ *
+ * @param name - Unique cache domain name (e.g. `'parsed-data'`,
+ *   `'analysis-result'`). Must be unique per logical cache — reusing a name
+ *   across unrelated caches would make them share the same backing Map.
  */
-export function createSessionCache<V>(): SessionCache<V> {
-  return new SessionCache<V>();
+export function createSessionCache<V>(name: string): SessionCache<V> {
+  return new SessionCache<V>(name);
 }
 
 /**

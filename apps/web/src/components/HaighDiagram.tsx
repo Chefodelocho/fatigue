@@ -15,7 +15,7 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 
 import type {
@@ -25,8 +25,14 @@ import type {
   StressComponent,
 } from '@fatigue/types';
 
-// Dynamic import — Plotly.js does not support SSR
-const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
+import ChartSpinner from '@/components/ChartSpinner';
+
+// Dynamic import — Plotly.js does not support SSR. The `loading` fallback
+// covers the (one-time) download of the Plotly.js chunk itself.
+const Plot = dynamic(() => import('react-plotly.js'), {
+  ssr: false,
+  loading: () => <ChartSpinner label="Loading chart engine…" />,
+});
 
 // -- Props --------------------------------------------------------------------
 
@@ -79,8 +85,17 @@ export default function HaighDiagram({ data, component }: HaighDiagramProps) {
 
   const traces = [goodmanTrace, gerberTrace, soderbergTrace, yieldTrace, scatterTrace];
 
+  // Tracks whether Plotly is still drawing/redrawing the current dataset, so
+  // we can show an overlay spinner instead of letting large point clouds
+  // (10k+ nodes) appear to freeze the page while they render.
+  const [isRendering, setIsRendering] = useState(true);
+  useEffect(() => {
+    setIsRendering(true);
+  }, [data, component]);
+
   return (
-    <div className="w-full" data-testid="haigh-diagram">
+    <div className="relative w-full" data-testid="haigh-diagram">
+      {isRendering && <ChartSpinner overlay label="Rendering Haigh diagram…" />}
       <Plot
         data={traces}
         layout={layout}
@@ -90,6 +105,8 @@ export default function HaighDiagram({ data, component }: HaighDiagramProps) {
           modeBarButtonsToRemove: ['lasso2d', 'autoScale2d'],
           displaylogo: false,
         }}
+        onInitialized={() => setIsRendering(false)}
+        onUpdate={() => setIsRendering(false)}
         useResizeHandler
         className="w-full"
         style={{ width: '100%', minHeight: '500px' }}

@@ -25,6 +25,7 @@ import {
   type ComponentHaighData,
 } from '@/lib/analysis-helpers';
 import { getParsedData } from '@/lib/parsed-data-cache';
+import { setAnalysisResult } from '@/lib/analysis-result-cache';
 import {
   applySessionCookie,
   getOrCreateSessionId,
@@ -107,6 +108,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Run analysis with new material (fast — no CSV parsing)
     const result = analyzeFEMData(parsed.nodes, material);
+
+    // Cache the full result so /api/visualization3d-full can build the
+    // HD (all-nodes) 3D dataset on demand without recomputing.
+    setAnalysisResult(sessionId, result);
 
     // Build response (same format as analyze/analyze-upload)
     const firstHaigh = generateHaighDiagramData(result.material, result.safetyFactors.VON, 'VON');

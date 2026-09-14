@@ -17,6 +17,7 @@ import type {
   NodeSafetyFactors,
   StressComponent,
   Visualization3DData,
+  Visualization3DFullData,
 } from '@fatigue/types';
 
 // -- Types -------------------------------------------------------------------
@@ -211,5 +212,66 @@ export function buildVisualization3D(
     bounds,
     backgroundCoordinates,
     worstByComponent,
+  };
+}
+
+// -- Full-Detail ("HD") 3D Visualization Builder ------------------------------
+
+/**
+ * Rounds a number to `decimals` places. Used to shrink the JSON payload of
+ * the full-detail 3D dataset, which can contain 500K+ entries per array.
+ */
+function round(value: number, decimals: number): number {
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
+}
+
+/**
+ * Build the full-detail ("HD") 3D visualization dataset for a single stress
+ * component — EVERY matched node, not capped like {@link buildVisualization3D}.
+ *
+ * Returns a columnar (struct-of-arrays) payload to minimize JSON size: no
+ * repeated object keys, and only the fields needed for rendering + hover
+ * (nodeId, x, y, z, minSF) are included.
+ *
+ * @param coordinates - Map of nodeId → spatial coordinates
+ * @param factors - Per-node safety factors for the requested component
+ * @param component - Which stress component this data represents
+ * @returns Full-detail visualization data, or `null` if no nodes matched
+ */
+export function buildFullComponent3DData(
+  coordinates: ReadonlyMap<number, NodeCoordinates>,
+  factors: readonly NodeSafetyFactors[],
+  component: StressComponent,
+): Visualization3DFullData | null {
+  const nodeIds: number[] = [];
+  const x: number[] = [];
+  const y: number[] = [];
+  const z: number[] = [];
+  const minSF: number[] = [];
+
+  for (const sf of factors) {
+    const coord = coordinates.get(sf.nodeId);
+    if (!coord) continue;
+
+    nodeIds.push(sf.nodeId);
+    x.push(round(coord.x, 2));
+    y.push(round(coord.y, 2));
+    z.push(round(coord.z, 2));
+    minSF.push(round(Number.isFinite(sf.minSF) ? sf.minSF : 9999.99, 3));
+  }
+
+  if (nodeIds.length === 0) {
+    return null;
+  }
+
+  return {
+    component,
+    totalMatchedNodes: nodeIds.length,
+    nodeIds,
+    x,
+    y,
+    z,
+    minSF,
   };
 }
