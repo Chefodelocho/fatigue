@@ -26,3 +26,5 @@ export { createIIWCurve, getIIWFatClasses } from './standards/iiw/recommendation
 export { createDNVGLCurve, getDNVGLFatClasses } from './standards/dnvgl/rp-c203';
 export { createABSCurve, getABSFatClasses } from './standards/abs/guide-fatigue';
 export { api579Level1Screening, estimateParisLawCycles } from './standards/api579-1/part14';
+export { evaluateFkmPrototype } from './standards/fkm/fatigue-prototype';
+export type { FkmPrototypeInput, FkmPrototypeResult } from './standards/fkm/fatigue-prototype';

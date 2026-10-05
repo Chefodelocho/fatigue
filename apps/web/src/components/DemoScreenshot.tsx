@@ -1,19 +1,12 @@
 /**
- * Placeholder-aware screenshot tile for the home page's "See It In Action"
- * gallery.
+ * Screenshot tile for the home page demo gallery.
  *
- * Renders the real screenshot at `src` if it exists; otherwise (404, e.g.
- * because no image has been dropped in yet) falls back to a styled
- * dashed-border placeholder showing the expected file path, so the tool's
- * screenshots can be added later — to `apps/web/public/<src>` — without any
- * further code changes.
+ * Uses the uploaded static assets directly; no placeholder fallback is shown.
  *
  * @module components/DemoScreenshot
  */
 
-'use client';
-
-import { useState } from 'react';
+import type { JSX } from 'react';
 
 interface DemoScreenshotProps {
   /** Public path to the screenshot, e.g. "/demo/haigh-diagram.png". */
@@ -26,9 +19,12 @@ interface DemoScreenshotProps {
   readonly description: string;
 }
 
-export default function DemoScreenshot({ src, alt, label, description }: DemoScreenshotProps) {
-  const [errored, setErrored] = useState(false);
-
+export default function DemoScreenshot({
+  src,
+  alt,
+  label,
+  description,
+}: DemoScreenshotProps): JSX.Element {
   return (
     <figure className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
       <div className="aspect-video w-full bg-gray-50">
