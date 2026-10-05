@@ -321,10 +321,8 @@ export default function AnalysisPage(): JSX.Element {
   const currentPointCount = currentHaighData?.points.length ?? 0;
   const current3DPointCount =
     hdMode && hdCriticalData
-     
       ? hdCriticalData.totalMatchedNodes
-     
-      : ((filtered3DData?.worstNodes.length ?? 0));
+      : (filtered3DData?.worstNodes.length ?? 0);
 
   const standardAssessment = useMemo(() => {
     if (!data || !material) {

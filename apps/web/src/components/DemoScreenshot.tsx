@@ -6,8 +6,10 @@
  * @module components/DemoScreenshot
  */
 
-import type { JSX } from 'react';
+'use client';
 
+import { useState } from 'react';
+import type { JSX } from 'react';
 interface DemoScreenshotProps {
   /** Public path to the screenshot, e.g. "/demo/haigh-diagram.png". */
   readonly src: string;
@@ -25,6 +27,8 @@ export default function DemoScreenshot({
   label,
   description,
 }: DemoScreenshotProps): JSX.Element {
+  const [errored, setErrored] = useState(false);
+
   return (
     <figure className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
       <div className="aspect-video w-full bg-gray-50">
