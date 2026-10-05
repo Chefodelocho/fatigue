@@ -127,8 +127,8 @@ export default function FileUpload({ onFilesSelected, files, disabled }: FileUpl
         FEM Data Files
       </h2>
       <p className="mb-4 text-xs text-gray-500">
-        Upload the base case and loading case CSV files exported from your FEM simulation.
-        Files should contain columns: Node, P1, P2, P3, VON.
+        Upload the base case and loading case CSV files exported from your FEM simulation. Files
+        should contain columns: Node, P1, P2, P3, VON.
       </p>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

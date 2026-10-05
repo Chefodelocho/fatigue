@@ -1,4 +1,12 @@
-import type { DamageEntry, DamageResult, DamageRatio, Result, SNCurve, StressRange, Cycles } from '@fatigue/types';
+import type {
+  DamageEntry,
+  DamageResult,
+  DamageRatio,
+  Result,
+  SNCurve,
+  StressRange,
+  Cycles,
+} from '@fatigue/types';
 import {
   ok,
   err,

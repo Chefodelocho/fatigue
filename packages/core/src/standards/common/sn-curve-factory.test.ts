@@ -35,13 +35,21 @@ describe('buildTwoSlopeSNCurve', () => {
 
 describe('assertSupportedNumericClass', () => {
   it('accepts supported class', () => {
-    const result = assertSupportedNumericClass({ label: 'class', value: 80, supported: [71, 80, 90] });
+    const result = assertSupportedNumericClass({
+      label: 'class',
+      value: 80,
+      supported: [71, 80, 90],
+    });
 
     expect(result.ok).toBe(true);
   });
 
   it('rejects unsupported class', () => {
-    const result = assertSupportedNumericClass({ label: 'class', value: 77, supported: [71, 80, 90] });
+    const result = assertSupportedNumericClass({
+      label: 'class',
+      value: 77,
+      supported: [71, 80, 90],
+    });
 
     expect(result.ok).toBe(false);
   });

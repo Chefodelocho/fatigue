@@ -112,14 +112,27 @@ export async function parseCoordinatesCSV(filePath: string): Promise<readonly No
       continue;
     }
 
-    const nodeId = parseInt(cols[colNode]!, 10);
+    const nodeIdValue = cols[colNode];
+    const xValue = cols[colX];
+    const yValue = cols[colY];
+    const zValue = cols[colZ];
+    if (
+      nodeIdValue === undefined ||
+      xValue === undefined ||
+      yValue === undefined ||
+      zValue === undefined
+    ) {
+      continue;
+    }
+
+    const nodeId = parseInt(nodeIdValue, 10);
     if (Number.isNaN(nodeId)) {
       continue; // Skip non-numeric rows
     }
 
-    const x = parseFloat(cols[colX]!);
-    const y = parseFloat(cols[colY]!);
-    const z = parseFloat(cols[colZ]!);
+    const x = parseFloat(xValue);
+    const y = parseFloat(yValue);
+    const z = parseFloat(zValue);
 
     // Skip rows with NaN coordinates
     if (Number.isNaN(x) || Number.isNaN(y) || Number.isNaN(z)) {

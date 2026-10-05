@@ -12,10 +12,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import type { AnalysisHistoryEntry } from '@/lib/analysis-store';
-import {
-  fetchHistory,
-  deleteFromHistory,
-} from '@/lib/analysis-store';
+import { fetchHistory, deleteFromHistory } from '@/lib/analysis-store';
 
 // -- Props -------------------------------------------------------------------
 
@@ -76,7 +73,9 @@ export default function AnalysisHistory({ onLoad, disabled }: AnalysisHistoryPro
             Analysis History
           </h2>
           <span className="text-xs text-gray-400">
-            {isLoading ? 'Loading…' : `${history.length} ${history.length === 1 ? 'entry' : 'entries'}`}
+            {isLoading
+              ? 'Loading…'
+              : `${history.length} ${history.length === 1 ? 'entry' : 'entries'}`}
           </span>
         </div>
         <svg
@@ -93,9 +92,7 @@ export default function AnalysisHistory({ onLoad, disabled }: AnalysisHistoryPro
       {isExpanded && (
         <div className="border-t border-gray-200">
           {isLoading ? (
-            <div className="px-5 py-8 text-center text-sm text-gray-400">
-              Loading history…
-            </div>
+            <div className="px-5 py-8 text-center text-sm text-gray-400">Loading history…</div>
           ) : history.length === 0 ? (
             <div className="px-5 py-8 text-center text-sm text-gray-400">
               No previous analyses. Run your first analysis to see it here.

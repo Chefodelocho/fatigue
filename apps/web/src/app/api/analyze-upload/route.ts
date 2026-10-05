@@ -29,10 +29,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 
-import type {
-  NodeCoordinates,
-  StressComponent,
-} from '@fatigue/types';
+import type { NodeCoordinates, StressComponent } from '@fatigue/types';
 
 import { analyzeFEMData, generateHaighDiagramData } from '@fatigue/core';
 import { loadFEMNodeStress, parseCoordinatesCSV } from '@fatigue/data';
@@ -46,17 +43,13 @@ import {
 } from '@/lib/analysis-helpers';
 import { setParsedData } from '@/lib/parsed-data-cache';
 import { setAnalysisResult } from '@/lib/analysis-result-cache';
-import {
-  getOrCreateSessionId,
-  applySessionCookie,
-} from '@/lib/session-cookie';
+import { getOrCreateSessionId, applySessionCookie } from '@/lib/session-cookie';
 
 // -- Configuration -----------------------------------------------------------
 
 const MAX_SCATTER_POINTS = 10_000;
 const MAX_3D_POINTS = 10_000;
 const ALL_COMPONENTS: readonly StressComponent[] = ['VON', 'P1', 'P2', 'P3'] as const;
-
 
 // -- POST Handler -------------------------------------------------------------
 
@@ -171,11 +164,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       setAnalysisResult(sessionId, result);
 
       // Generate Haigh diagram for VON to extract failure lines
-      const firstHaigh = generateHaighDiagramData(
-        result.material,
-        result.safetyFactors.VON,
-        'VON',
-      );
+      const firstHaigh = generateHaighDiagramData(result.material, result.safetyFactors.VON, 'VON');
 
       const haighLines: HaighLines = {
         goodmanLine: firstHaigh.goodmanLine,
@@ -185,8 +174,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       };
 
       // Pre-compute worst scatter points for ALL components
-      const haighPointsByComponent: Record<StressComponent, ComponentHaighData> =
-        {} as Record<StressComponent, ComponentHaighData>;
+      const haighPointsByComponent: Record<StressComponent, ComponentHaighData> = {} as Record<
+        StressComponent,
+        ComponentHaighData
+      >;
 
       haighPointsByComponent.VON = {
         points: selectWorstPoints(firstHaigh.points, MAX_SCATTER_POINTS),
@@ -209,9 +200,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
 
       // Build 3D visualization data if coordinates were provided
-      const coordMap = coordinates
-        ? new Map(coordinates.map((c) => [c.nodeId, c]))
-        : null;
+      const coordMap = coordinates ? new Map(coordinates.map((c) => [c.nodeId, c])) : null;
 
       const visualization3D = coordMap
         ? buildVisualization3D(coordMap, result.safetyFactors, MAX_3D_POINTS)
@@ -248,9 +237,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('[api/analyze-upload] Error:', message);
-    return NextResponse.json(
-      { error: 'Analysis failed', details: message },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: 'Analysis failed', details: message }, { status: 500 });
   }
 }

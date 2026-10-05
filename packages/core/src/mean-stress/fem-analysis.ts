@@ -101,7 +101,11 @@ export function analyzeFEMData(
         material,
       );
 
-      buckets[component]!.push(sf);
+      const bucket = buckets[component];
+      if (bucket === undefined) {
+        throw new Error(`No result bucket configured for stress component ${component}`);
+      }
+      bucket.push(sf);
     }
   }
 
@@ -144,18 +148,20 @@ export function analyzeFEMData(
  * @returns The NodeSafetyFactors with the lowest finite minSF
  */
 function findMinSF(factors: readonly NodeSafetyFactors[]): NodeSafetyFactors {
-  const finiteFactors = factors.filter(
-    (f) => !Number.isNaN(f.minSF) && Number.isFinite(f.minSF),
-  );
+  const firstFactor = factors[0];
+  if (firstFactor === undefined) {
+    throw new Error('Cannot find minimum safety factor for an empty node list');
+  }
+
+  const finiteFactors = factors.filter((f) => !Number.isNaN(f.minSF) && Number.isFinite(f.minSF));
 
   if (finiteFactors.length === 0) {
     // All nodes have infinite safety (no cyclic loading) — return the first
-    return factors[0]!;
+    return firstFactor;
   }
 
-  let min = finiteFactors[0]!;
-  for (let i = 1; i < finiteFactors.length; i++) {
-    const current = finiteFactors[i]!;
+  let min = finiteFactors[0] ?? firstFactor;
+  for (const current of finiteFactors.slice(1)) {
     if (current.minSF < min.minSF) {
       min = current;
     }

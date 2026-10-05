@@ -9,7 +9,9 @@ import { assertSupportedNumericClass, buildTwoSlopeSNCurve } from '../common/sn-
  * These are scaffold values for implementation startup and should be validated
  * against project-approved design tables for each joint detail.
  */
-const EN1993_DETAIL_CATEGORIES = [36, 40, 45, 50, 56, 63, 71, 80, 90, 100, 112, 125, 140, 160] as const;
+const EN1993_DETAIL_CATEGORIES = [
+  36, 40, 45, 50, 56, 63, 71, 80, 90, 100, 112, 125, 140, 160,
+] as const;
 
 /**
  * Create a two-slope EN 1993-1-9 S-N curve from detail category.

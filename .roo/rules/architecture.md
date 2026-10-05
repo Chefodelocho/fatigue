@@ -3,6 +3,7 @@
 ## System Architecture
 
 ### Layered Architecture
+
 The fatigue analysis tool follows a layered architecture pattern:
 
 ```
@@ -18,6 +19,7 @@ The fatigue analysis tool follows a layered architecture pattern:
 ```
 
 ### Package Dependencies
+
 Dependency flow must follow the layer order. Inner layers must NOT depend on outer layers:
 
 ```

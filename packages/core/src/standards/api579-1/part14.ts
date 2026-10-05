@@ -47,7 +47,9 @@ interface ParisCrackGrowthInput {
  * Phase-1 implementation provides a deterministic usage-factor check that can
  * be used while full FFS detail procedures are incrementally added.
  */
-export function api579Level1Screening(input: API579Level1Input): Result<API579Level1Result, string> {
+export function api579Level1Screening(
+  input: API579Level1Input,
+): Result<API579Level1Result, string> {
   const { stressRange, cycles, allowableCycles, limit = 1 } = input;
 
   if (stressRange <= 0) {
@@ -80,14 +82,7 @@ export function api579Level1Screening(input: API579Level1Input): Result<API579Le
  * Paris-law approximation.
  */
 export function estimateParisLawCycles(input: ParisCrackGrowthInput): Result<number, string> {
-  const {
-    c,
-    m,
-    deltaK,
-    initialCrackSizeMm,
-    finalCrackSizeMm,
-    integrationSteps = 200,
-  } = input;
+  const { c, m, deltaK, initialCrackSizeMm, finalCrackSizeMm, integrationSteps = 200 } = input;
 
   if (c <= 0) {
     return err('Paris-law coefficient C must be positive');

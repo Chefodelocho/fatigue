@@ -4,14 +4,14 @@
 
 The fatigue analysis tool consumes stress output from FEM (Finite Element Method) simulations exported as CSV files. Two reference datasets are provided:
 
-| Property | Base Case | Loading Case |
-|---|---|---|
-| **File** | `data/reference/base/Base_Case.csv` | `data/reference/load/Running_Ex_CD.csv` |
-| **Study Name** | Base Case | Running Ex CD |
-| **File Size** | 84 MB | 84 MB |
-| **Total Lines** | 931,983 | 931,991 |
-| **Data Rows** | 931,978 | 931,986 |
-| **Node Range** | 1 – 931,978 | 1 – 931,986 |
+| Property        | Base Case                           | Loading Case                            |
+| --------------- | ----------------------------------- | --------------------------------------- |
+| **File**        | `data/reference/base/Base_Case.csv` | `data/reference/load/Running_Ex_CD.csv` |
+| **Study Name**  | Base Case                           | Running Ex CD                           |
+| **File Size**   | 84 MB                               | 84 MB                                   |
+| **Total Lines** | 931,983                             | 931,991                                 |
+| **Data Rows**   | 931,978                             | 931,986                                 |
+| **Node Range**  | 1 – 931,978                         | 1 – 931,986                             |
 
 The **Base Case** represents the static/dead-load condition. The **Loading Case** (Running Ex CD) represents the operational/live-load condition. For fatigue analysis, stress ranges are derived from the superposition or differencing of these two states.
 
@@ -58,15 +58,15 @@ Each row represents one FEM node with its stress state:
 
 ## Column Definitions
 
-| Column | Name | Description | Sign | Unit |
-|--------|------|-------------|------|------|
-| 1 | **Node** | FEM mesh node ID (1-based integer) | Always ≥ 0 | — |
-| 2 | **P1** | First principal stress (maximum) | Signed (±) | N/m² |
-| 3 | **P2** | Second principal stress (intermediate) | Signed (±) | N/m² |
-| 4 | **P3** | Third principal stress (minimum) | Signed (±) | N/m² |
-| 5 | **VON** | Von Mises equivalent stress | Always ≥ 0 | N/m² |
-| 6 | **INT** | Stress intensity (= max(|P1−P2|, |P2−P3|, |P3−P1|)) | Always ≥ 0 | N/m² |
-| 7 | **TRI** | Triaxial sum (= P1 + P2 + P3, i.e., 3 × hydrostatic stress) | Signed (±) | N/m² |
+| Column | Name     | Description                                                 | Sign       | Unit |
+| ------ | -------- | ----------------------------------------------------------- | ---------- | ---- | ----- | --- | ----- | --- | ---------- | ---- |
+| 1      | **Node** | FEM mesh node ID (1-based integer)                          | Always ≥ 0 | —    |
+| 2      | **P1**   | First principal stress (maximum)                            | Signed (±) | N/m² |
+| 3      | **P2**   | Second principal stress (intermediate)                      | Signed (±) | N/m² |
+| 4      | **P3**   | Third principal stress (minimum)                            | Signed (±) | N/m² |
+| 5      | **VON**  | Von Mises equivalent stress                                 | Always ≥ 0 | N/m² |
+| 6      | **INT**  | Stress intensity (= max(                                    | P1−P2      | ,    | P2−P3 | ,   | P3−P1 | ))  | Always ≥ 0 | N/m² |
+| 7      | **TRI**  | Triaxial sum (= P1 + P2 + P3, i.e., 3 × hydrostatic stress) | Signed (±) | N/m² |
 
 ### Relationships Between Columns
 
@@ -80,25 +80,25 @@ Each row represents one FEM node with its stress state:
 
 ### Base Case (`Base_Case.csv`)
 
-| Column | Min (N/m²) | Max (N/m²) | Min (MPa) | Max (MPa) |
-|--------|-----------|-----------|-----------|-----------|
-| P1 | −2.89 × 10⁶ | 8.26 × 10⁷ | −2.89 | 82.6 |
-| P2 | −4.08 × 10⁷ | 2.67 × 10⁷ | −40.8 | 26.7 |
-| P3 | −7.78 × 10⁷ | 5.08 × 10⁶ | −77.8 | 5.08 |
-| VON | 0 | 8.20 × 10⁷ | 0 | 82.0 |
-| INT | 0 | 8.26 × 10⁷ | 0 | 82.6 |
-| TRI | −1.03 × 10⁸ | 1.03 × 10⁸ | −103 | 103 |
+| Column | Min (N/m²)  | Max (N/m²) | Min (MPa) | Max (MPa) |
+| ------ | ----------- | ---------- | --------- | --------- |
+| P1     | −2.89 × 10⁶ | 8.26 × 10⁷ | −2.89     | 82.6      |
+| P2     | −4.08 × 10⁷ | 2.67 × 10⁷ | −40.8     | 26.7      |
+| P3     | −7.78 × 10⁷ | 5.08 × 10⁶ | −77.8     | 5.08      |
+| VON    | 0           | 8.20 × 10⁷ | 0         | 82.0      |
+| INT    | 0           | 8.26 × 10⁷ | 0         | 82.6      |
+| TRI    | −1.03 × 10⁸ | 1.03 × 10⁸ | −103      | 103       |
 
 ### Loading Case (`Running_Ex_CD.csv`)
 
-| Column | Min (N/m²) | Max (N/m²) | Min (MPa) | Max (MPa) |
-|--------|-----------|-----------|-----------|-----------|
-| P1 | −1.45 × 10⁷ | 1.79 × 10⁸ | −14.5 | 179 |
-| P2 | −1.66 × 10⁸ | 6.39 × 10⁷ | −166 | 63.9 |
-| P3 | −2.38 × 10⁸ | 2.25 × 10⁷ | −238 | 22.5 |
-| VON | 0 | 2.11 × 10⁸ | 0 | 211 |
-| INT | 0 | 2.38 × 10⁸ | 0 | 238 |
-| TRI | −4.04 × 10⁸ | 2.43 × 10⁸ | −404 | 243 |
+| Column | Min (N/m²)  | Max (N/m²) | Min (MPa) | Max (MPa) |
+| ------ | ----------- | ---------- | --------- | --------- |
+| P1     | −1.45 × 10⁷ | 1.79 × 10⁸ | −14.5     | 179       |
+| P2     | −1.66 × 10⁸ | 6.39 × 10⁷ | −166      | 63.9      |
+| P3     | −2.38 × 10⁸ | 2.25 × 10⁷ | −238      | 22.5      |
+| VON    | 0           | 2.11 × 10⁸ | 0         | 211       |
+| INT    | 0           | 2.38 × 10⁸ | 0         | 238       |
+| TRI    | −4.04 × 10⁸ | 2.43 × 10⁸ | −404      | 243       |
 
 The loading case shows significantly higher stress magnitudes (roughly 2–3× the base case), which is consistent with operational loading being superimposed on the static dead load.
 
@@ -119,23 +119,23 @@ The loading case shows significantly higher stress magnitudes (roughly 2–3× t
 
 ### Base Case (first 5 nodes)
 
-| Node | P1 | P2 | P3 | VON | INT | TRI |
-|------|----|----|-----|-----|-----|-----|
-| 1 | 47,389 | 6,343 | 88 | 44,504 | 47,300 | 53,820 |
-| 2 | 10,076 | 471 | −2,779 | 11,577 | 12,854 | 7,768 |
-| 3 | −578 | −8,687 | −90,110 | 85,765 | 89,531 | −99,375 |
-| 4 | 21,395 | 104 | −18,718 | 34,760 | 40,113 | 2,780 |
-| 5 | 3,935 | −80 | −32,056 | 34,161 | 35,991 | −28,202 |
+| Node | P1     | P2     | P3      | VON    | INT    | TRI     |
+| ---- | ------ | ------ | ------- | ------ | ------ | ------- |
+| 1    | 47,389 | 6,343  | 88      | 44,504 | 47,300 | 53,820  |
+| 2    | 10,076 | 471    | −2,779  | 11,577 | 12,854 | 7,768   |
+| 3    | −578   | −8,687 | −90,110 | 85,765 | 89,531 | −99,375 |
+| 4    | 21,395 | 104    | −18,718 | 34,760 | 40,113 | 2,780   |
+| 5    | 3,935  | −80    | −32,056 | 34,161 | 35,991 | −28,202 |
 
 ### Loading Case (first 5 nodes)
 
-| Node | P1 | P2 | P3 | VON | INT | TRI |
-|------|----|----|-----|-----|-----|-----|
-| 1 | 35,756 | 18,466 | 145 | 30,844 | 35,611 | 54,366 |
-| 2 | 4,408 | −195 | −24,862 | 27,261 | 29,270 | −20,649 |
-| 3 | −564 | −7,292 | −89,457 | 85,727 | 88,893 | −97,313 |
-| 4 | 40,104 | 140 | −20,042 | 53,018 | 60,145 | 20,202 |
-| 5 | 14,442 | 69 | −20,501 | 30,420 | 34,943 | −5,990 |
+| Node | P1     | P2     | P3      | VON    | INT    | TRI     |
+| ---- | ------ | ------ | ------- | ------ | ------ | ------- |
+| 1    | 35,756 | 18,466 | 145     | 30,844 | 35,611 | 54,366  |
+| 2    | 4,408  | −195   | −24,862 | 27,261 | 29,270 | −20,649 |
+| 3    | −564   | −7,292 | −89,457 | 85,727 | 88,893 | −97,313 |
+| 4    | 40,104 | 140    | −20,042 | 53,018 | 60,145 | 20,202  |
+| 5    | 14,442 | 69     | −20,501 | 30,420 | 34,943 | −5,990  |
 
 ---
 
@@ -171,13 +171,13 @@ When implementing the CSV importer, the following must be handled:
 
 ## Data Quality Observations
 
-| Observation | Detail |
-|-------------|--------|
-| **Missing values** | None detected — all rows have 7 complete fields |
-| **Negative VON** | None detected (VON ≥ 0 for all nodes, as expected) |
-| **Zero VON** | Exactly 1 node with VON = 0 in each file (likely a constrained/boundary node) |
-| **Negative INT** | None detected (INT ≥ 0 for all nodes, as expected) |
-| **Node ID gaps** | Node IDs appear sequential (1, 2, 3, …, N) with no gaps |
-| **Numeric precision** | 6 significant figures in scientific notation |
-| **Outliers** | The TRI column shows large negative values (down to −404 MPa in load case), consistent with highly compressive triaxial stress states |
-| **File integrity** | No trailing footer or summary lines; data ends at last node |
+| Observation           | Detail                                                                                                                                |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **Missing values**    | None detected — all rows have 7 complete fields                                                                                       |
+| **Negative VON**      | None detected (VON ≥ 0 for all nodes, as expected)                                                                                    |
+| **Zero VON**          | Exactly 1 node with VON = 0 in each file (likely a constrained/boundary node)                                                         |
+| **Negative INT**      | None detected (INT ≥ 0 for all nodes, as expected)                                                                                    |
+| **Node ID gaps**      | Node IDs appear sequential (1, 2, 3, …, N) with no gaps                                                                               |
+| **Numeric precision** | 6 significant figures in scientific notation                                                                                          |
+| **Outliers**          | The TRI column shows large negative values (down to −404 MPa in load case), consistent with highly compressive triaxial stress states |
+| **File integrity**    | No trailing footer or summary lines; data ends at last node                                                                           |

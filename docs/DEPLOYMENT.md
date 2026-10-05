@@ -54,14 +54,14 @@ docker compose up -d
 
 ## Environment Variables
 
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `SESSION_COOKIE_SECRET` | **Yes** | `change-me-in-production` | Signs session cookies. Generate with `openssl rand -hex 32`. |
-| `PORT` | No | `3000` | Port the server listens on. |
-| `NODE_ENV` | No | `production` | Runtime environment. |
-| `NEXT_TELEMETRY_DISABLED` | No | `1` | Disables Next.js telemetry. |
-| `MAX_SCATTER_POINTS` | No | `10000` | Max points rendered in Haigh diagram scatter. |
-| `MAX_3D_POINTS` | No | `10000` | Max points rendered in the 3D safety factor plot. |
+| Variable                  | Required | Default                   | Description                                                  |
+| ------------------------- | -------- | ------------------------- | ------------------------------------------------------------ |
+| `SESSION_COOKIE_SECRET`   | **Yes**  | `change-me-in-production` | Signs session cookies. Generate with `openssl rand -hex 32`. |
+| `PORT`                    | No       | `3000`                    | Port the server listens on.                                  |
+| `NODE_ENV`                | No       | `production`              | Runtime environment.                                         |
+| `NEXT_TELEMETRY_DISABLED` | No       | `1`                       | Disables Next.js telemetry.                                  |
+| `MAX_SCATTER_POINTS`      | No       | `10000`                   | Max points rendered in Haigh diagram scatter.                |
+| `MAX_3D_POINTS`           | No       | `10000`                   | Max points rendered in the 3D safety factor plot.            |
 
 Copy `.env.example` to `.env` as a starting point:
 
@@ -74,10 +74,10 @@ cp .env.example .env
 
 ## Volumes
 
-| Container path | Purpose | Recommended mount |
-|---|---|---|
-| `/app/data/reference` | Built-in FEM reference dataset | `./data/reference:ro` (read-only) |
-| `/app/data/analyses` | Saved analysis results | Named Docker volume for persistence |
+| Container path        | Purpose                        | Recommended mount                   |
+| --------------------- | ------------------------------ | ----------------------------------- |
+| `/app/data/reference` | Built-in FEM reference dataset | `./data/reference:ro` (read-only)   |
+| `/app/data/analyses`  | Saved analysis results         | Named Docker volume for persistence |
 
 The reference dataset ships with the repository (`data/reference/`). Mount it read-only so the container cannot modify it. Analysis results are written to `/app/data/analyses` — use a named volume to persist them across container restarts.
 

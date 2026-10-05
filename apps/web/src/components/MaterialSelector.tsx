@@ -12,11 +12,7 @@
 
 import { useState } from 'react';
 
-import {
-  MATERIAL_DATABASE,
-  getMaterialGroups,
-  type MaterialEntry,
-} from '@/lib/materials';
+import { MATERIAL_DATABASE, getMaterialGroups, type MaterialEntry } from '@/lib/materials';
 import type { MaterialConfig } from '@/lib/analysis-store';
 
 // -- Props -------------------------------------------------------------------
@@ -215,10 +211,7 @@ export default function MaterialSelector({ value, onChange, disabled }: Material
       {mode === 'custom' && (
         <div className="space-y-4">
           <div>
-            <label
-              htmlFor="custom-name"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
+            <label htmlFor="custom-name" className="mb-1 block text-sm font-medium text-gray-700">
               Material Name
             </label>
             <input

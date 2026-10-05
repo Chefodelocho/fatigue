@@ -80,12 +80,12 @@ interface Scatter3DChartProps {
  * Uses a custom diverging scale so low SF → red.
  */
 const COLOR_SCALE = [
-  [0, 'rgb(255, 0, 0)'],       // Red — critical
-  [0.15, 'rgb(255, 100, 0)'],  // Orange
-  [0.3, 'rgb(255, 200, 0)'],   // Yellow
-  [0.5, 'rgb(180, 230, 50)'],  // Yellow-green
-  [0.7, 'rgb(100, 200, 80)'],  // Light green
-  [1, 'rgb(0, 150, 0)'],       // Green — safe
+  [0, 'rgb(255, 0, 0)'], // Red — critical
+  [0.15, 'rgb(255, 100, 0)'], // Orange
+  [0.3, 'rgb(255, 200, 0)'], // Yellow
+  [0.5, 'rgb(180, 230, 50)'], // Yellow-green
+  [0.7, 'rgb(100, 200, 80)'], // Light green
+  [1, 'rgb(0, 150, 0)'], // Green — safe
 ] as const;
 
 // -- Component ---------------------------------------------------------------
@@ -184,8 +184,8 @@ export default function Scatter3DChart({
     // Background trace — translucid grey for spatial context
     const bgTrace = {
       x: backgroundCoordinates.map((c) => c.x),
-      y: backgroundCoordinates.map((c) => c.z),  // Z → Plotly Y (depth)
-      z: backgroundCoordinates.map((c) => c.y),  // Y → Plotly Z (vertical)
+      y: backgroundCoordinates.map((c) => c.z), // Z → Plotly Y (depth)
+      z: backgroundCoordinates.map((c) => c.y), // Y → Plotly Z (vertical)
       mode: 'markers' as const,
       type: 'scatter3d' as const,
       marker: {
@@ -201,8 +201,8 @@ export default function Scatter3DChart({
     // Critical points trace — color-coded by minSF
     const critTrace = {
       x: worstNodes.map((n) => n.x),
-      y: worstNodes.map((n) => n.z),  // Z → Plotly Y (depth)
-      z: worstNodes.map((n) => n.y),  // Y → Plotly Z (vertical)
+      y: worstNodes.map((n) => n.z), // Z → Plotly Y (depth)
+      z: worstNodes.map((n) => n.y), // Y → Plotly Z (vertical)
       text: worstNodes.map(
         (n) =>
           `Node ${n.nodeId}<br>` +
@@ -253,24 +253,15 @@ export default function Scatter3DChart({
       scene: {
         xaxis: {
           title: { text: 'X (mm)' },
-          range: [
-            bounds.minX - xRange * padFactor,
-            bounds.maxX + xRange * padFactor,
-          ],
+          range: [bounds.minX - xRange * padFactor, bounds.maxX + xRange * padFactor],
         },
         yaxis: {
           title: { text: 'Z (mm)' },
-          range: [
-            bounds.minZ - zRange * padFactor,
-            bounds.maxZ + zRange * padFactor,
-          ],
+          range: [bounds.minZ - zRange * padFactor, bounds.maxZ + zRange * padFactor],
         },
         zaxis: {
           title: { text: 'Y (mm)' },
-          range: [
-            bounds.minY - yRange * padFactor,
-            bounds.maxY + yRange * padFactor,
-          ],
+          range: [bounds.minY - yRange * padFactor, bounds.maxY + yRange * padFactor],
         },
         aspectmode: 'data' as const,
         camera: {
@@ -298,7 +289,11 @@ export default function Scatter3DChart({
   }, [worstNodes, backgroundCoordinates, hdMode, hdData, hdBackgroundData]);
 
   if (hdLoading) {
-    return <ChartSpinner label={`Loading HD dataset — all ${matchedNodeCount.toLocaleString()} nodes for ${component}…`} />;
+    return (
+      <ChartSpinner
+        label={`Loading HD dataset — all ${matchedNodeCount.toLocaleString()} nodes for ${component}…`}
+      />
+    );
   }
 
   if (traces.length === 0) {
@@ -315,8 +310,8 @@ export default function Scatter3DChart({
         {isHD ? (
           <span>
             HD / Detail mode — {(hdData?.totalMatchedNodes ?? 0).toLocaleString()} critical nodes
-            (color-coded) · {(hdBackgroundData?.totalMatchedNodes ?? 0).toLocaleString()} nodes above
-            threshold (grey) · {matchedNodeCount.toLocaleString()} total
+            (color-coded) · {(hdBackgroundData?.totalMatchedNodes ?? 0).toLocaleString()} nodes
+            above threshold (grey) · {matchedNodeCount.toLocaleString()} total
           </span>
         ) : (
           <span>
@@ -328,9 +323,7 @@ export default function Scatter3DChart({
         <span>Component: {component}</span>
       </div>
       <div className="relative">
-        {isRendering && (
-          <ChartSpinner overlay label="Rendering 3D safety factor map…" />
-        )}
+        {isRendering && <ChartSpinner overlay label="Rendering 3D safety factor map…" />}
         <Plot
           data={traces}
           layout={layout}
@@ -347,7 +340,8 @@ export default function Scatter3DChart({
         />
       </div>
       <p className="mt-2 text-xs text-gray-400">
-        Drag to rotate · Scroll to zoom · Click + drag to pan · Hover points for details · Y = vertical axis
+        Drag to rotate · Scroll to zoom · Click + drag to pan · Hover points for details · Y =
+        vertical axis
       </p>
     </div>
   );

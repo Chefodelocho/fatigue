@@ -27,14 +27,14 @@ Line 9: 2  ,0.000e+00   ,842.05  ,-347.17  ,35.626  ,D8001346589-1/D8000854949-1
 ```
 
 **Columns**:
-| Column       | Type    | Description                                    |
+| Column | Type | Description |
 |-------------|---------|------------------------------------------------|
-| `Node`      | integer | FEM mesh node ID (joins with stress data)      |
-| `Value`     | float   | FEM result value (not used for visualization)  |
-| `X (mm)`    | float   | X coordinate in millimeters                    |
-| `Y (mm)`    | float   | Y coordinate in millimeters                    |
-| `Z (mm)`    | float   | Z coordinate in millimeters                    |
-| `Components`| string  | FEM part/component name (not used initially)   |
+| `Node` | integer | FEM mesh node ID (joins with stress data) |
+| `Value` | float | FEM result value (not used for visualization) |
+| `X (mm)` | float | X coordinate in millimeters |
+| `Y (mm)` | float | Y coordinate in millimeters |
+| `Z (mm)` | float | Z coordinate in millimeters |
+| `Components`| string | FEM part/component name (not used initially) |
 
 ---
 
@@ -181,6 +181,7 @@ New file: `packages/data/src/importers/coordinates-csv-parser.ts`
 ```
 
 **Key design decisions**:
+
 - **Streaming**: Use `readline.createInterface` + `createReadStream` (same pattern as `fem-csv-parser.ts`)
 - **Dynamic header detection**: Scan for a row where columns include `NODE` and `X (MM)` (case-insensitive, trimmed)
 - **Skip `Value` and `Components` columns**: Not needed for visualization
@@ -188,11 +189,13 @@ New file: `packages/data/src/importers/coordinates-csv-parser.ts`
 - **Return**: `readonly NodeCoordinates[]`
 
 New function signature:
+
 ```typescript
-export async function parseCoordinatesCSV(filePath: string): Promise<readonly NodeCoordinates[]>
+export async function parseCoordinatesCSV(filePath: string): Promise<readonly NodeCoordinates[]>;
 ```
 
 Export from `packages/data/src/index.ts`:
+
 ```typescript
 export { parseCoordinatesCSV } from './importers/coordinates-csv-parser';
 export type { NodeCoordinates } from './importers/coordinates-csv-parser';
@@ -209,6 +212,7 @@ const MAX_3D_POINTS = 10_000;
 #### FormData Changes
 
 Accept an optional third file:
+
 ```typescript
 const coordinatesFile = formData.get('coordinatesFile');
 // Optional: may be null or undefined
@@ -220,6 +224,7 @@ if (coordinatesFile && coordinatesFile instanceof File) {
 #### Processing Pipeline Extension
 
 When coordinates are provided:
+
 1. Write `coordinatesFile` to temp file
 2. Parse with `parseCoordinatesCSV()`
 3. Build `Map<number, NodeCoordinates>` for O(1) lookup
@@ -258,7 +263,7 @@ Add an **optional** third drop zone for the coordinates file:
 export interface UploadedFiles {
   readonly base: File;
   readonly load: File;
-  readonly coordinates?: File;  // NEW — optional
+  readonly coordinates?: File; // NEW — optional
 }
 ```
 
@@ -280,12 +285,14 @@ if (files.coordinates) {
 New component: `apps/web/src/components/Scatter3DChart.tsx`
 
 **Technology choice**: **Plotly.js** (`react-plotly.js`)
+
 - Already considered in the tech stack (see project overview)
 - Native 3D scatter plot with WebGL rendering
 - Built-in color scales, tooltips, camera controls
 - Handles 10K points easily with WebGL
 
 **Component props**:
+
 ```typescript
 interface Scatter3DChartProps {
   /** 3D visualization data for the selected component */
@@ -300,11 +307,13 @@ interface Scatter3DChartProps {
 ```
 
 **Color mapping**:
+
 - Use Plotly's built-in color scales (e.g., `Turbo`, `Jet`, or `RdYlGn`)
 - Map `minSF` → color: **red** (SF ≈ 1.0, critical) → **yellow** → **green** (SF >> 1.0, safe)
 - Add a color bar with labeled axis showing SF values
 
 **Interactivity**:
+
 - Orbit, zoom, pan via mouse/touch
 - Hover tooltip: nodeId, (x, y, z), minSF, Goodman/Gerber/Soderberg values
 - Component switch via the existing component selector (already pre-computed for all 4)
@@ -318,14 +327,14 @@ In [`apps/web/src/app/analysis/page.tsx`](../../apps/web/src/app/analysis/page.t
 ```typescript
 interface AnalysisData {
   // ... existing fields ...
-  visualization3D: Visualization3DData | null;  // NEW
+  visualization3D: Visualization3DData | null; // NEW
 }
 ```
 
 #### New State
 
 ```typescript
-const [show3D, setShow3D] = useState(true);  // toggle for 3D section
+const [show3D, setShow3D] = useState(true); // toggle for 3D section
 ```
 
 #### Results Section Addition
@@ -333,22 +342,24 @@ const [show3D, setShow3D] = useState(true);  // toggle for 3D section
 After the Haigh Diagram section, add a conditional 3D visualization:
 
 ```tsx
-{/* 3D Safety Factor Visualization — only when coordinates were uploaded */}
-{data.visualization3D && (
-  <section>
-    <h2 className="mb-4 text-lg font-semibold text-gray-900">
-      3D Safety Factor Map
-    </h2>
-    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <Scatter3DChart
-        data={data.visualization3D.worstByComponent[component]}
-        bounds={data.visualization3D.bounds}
-        component={component}
-        matchedNodeCount={data.visualization3D.matchedNodeCount}
-      />
-    </div>
-  </section>
-)}
+{
+  /* 3D Safety Factor Visualization — only when coordinates were uploaded */
+}
+{
+  data.visualization3D && (
+    <section>
+      <h2 className="mb-4 text-lg font-semibold text-gray-900">3D Safety Factor Map</h2>
+      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+        <Scatter3DChart
+          data={data.visualization3D.worstByComponent[component]}
+          bounds={data.visualization3D.bounds}
+          component={component}
+          matchedNodeCount={data.visualization3D.matchedNodeCount}
+        />
+      </div>
+    </section>
+  );
+}
 ```
 
 ---
@@ -356,16 +367,19 @@ After the Haigh Diagram section, add a conditional 3D visualization:
 ## Performance Considerations
 
 ### Coordinate File Size
+
 - Reference file: ~932K rows ≈ 80-120 MB
 - **Streaming parser** avoids loading entire file into memory
 - **Join on nodeId** using `Map<number, NodeCoordinates>` — O(n) build + O(m) lookup
 
 ### 3D Point Limit
+
 - **10,000 points max** per component (configurable via `MAX_3D_POINTS`)
 - Plotly.js WebGL handles 10K points smoothly
 - Sorting + slicing is O(n log n) — acceptable for ~900K nodes
 
 ### API Response Size
+
 - 10,000 points × 4 components × ~10 fields ≈ ~5-8 MB JSON
 - This is acceptable for a single request but could be optimized later:
   - Binary format (e.g., flat arrays for x[], y[], z[], minSF[])
@@ -373,6 +387,7 @@ After the Haigh Diagram section, add a conditional 3D visualization:
   - **For now**: Pre-compute all 4 components in one response (matches existing Haigh pattern)
 
 ### Client-Side Rendering
+
 - Plotly.js WebGL renderer handles 10K 3D points without issues
 - Component switching is instant (all data pre-loaded)
 
@@ -380,13 +395,14 @@ After the Haigh Diagram section, add a conditional 3D visualization:
 
 ## New Package Dependencies
 
-| Package                | Location   | Purpose                          |
-|------------------------|------------|----------------------------------|
-| `plotly.js-dist-min`   | `apps/web` | WebGL-based 3D scatter plots     |
-| `react-plotly.js`      | `apps/web` | React wrapper for Plotly.js      |
-| `@types/react-plotly.js` | `apps/web` | TypeScript types               |
+| Package                  | Location   | Purpose                      |
+| ------------------------ | ---------- | ---------------------------- |
+| `plotly.js-dist-min`     | `apps/web` | WebGL-based 3D scatter plots |
+| `react-plotly.js`        | `apps/web` | React wrapper for Plotly.js  |
+| `@types/react-plotly.js` | `apps/web` | TypeScript types             |
 
 Install:
+
 ```bash
 cd apps/web && pnpm add plotly.js-dist-min react-plotly.js
 cd apps/web && pnpm add -D @types/react-plotly.js
@@ -397,20 +413,22 @@ cd apps/web && pnpm add -D @types/react-plotly.js
 ## File Changes Summary
 
 ### New Files
-| File | Package | Description |
-|------|---------|-------------|
-| `packages/types/src/coordinates.ts` | types | New interfaces for coordinates and 3D viz |
-| `packages/data/src/importers/coordinates-csv-parser.ts` | data | Streaming CSV parser for coordinate files |
-| `apps/web/src/components/Scatter3DChart.tsx` | web | 3D scatter plot component using Plotly.js |
+
+| File                                                    | Package | Description                               |
+| ------------------------------------------------------- | ------- | ----------------------------------------- |
+| `packages/types/src/coordinates.ts`                     | types   | New interfaces for coordinates and 3D viz |
+| `packages/data/src/importers/coordinates-csv-parser.ts` | data    | Streaming CSV parser for coordinate files |
+| `apps/web/src/components/Scatter3DChart.tsx`            | web     | 3D scatter plot component using Plotly.js |
 
 ### Modified Files
-| File | Package | Changes |
-|------|---------|---------|
-| `packages/types/src/index.ts` | types | Export new coordinate types |
-| `packages/data/src/index.ts` | data | Export `parseCoordinatesCSV` |
-| `apps/web/src/app/api/analyze-upload/route.ts` | web | Accept optional `coordinatesFile`, join + return 3D data |
-| `apps/web/src/components/FileUpload.tsx` | web | Add optional coordinates drop zone |
-| `apps/web/src/app/analysis/page.tsx` | web | Add 3D visualization section, extend types |
+
+| File                                           | Package | Changes                                                  |
+| ---------------------------------------------- | ------- | -------------------------------------------------------- |
+| `packages/types/src/index.ts`                  | types   | Export new coordinate types                              |
+| `packages/data/src/index.ts`                   | data    | Export `parseCoordinatesCSV`                             |
+| `apps/web/src/app/api/analyze-upload/route.ts` | web     | Accept optional `coordinatesFile`, join + return 3D data |
+| `apps/web/src/components/FileUpload.tsx`       | web     | Add optional coordinates drop zone                       |
+| `apps/web/src/app/analysis/page.tsx`           | web     | Add 3D visualization section, extend types               |
 
 ---
 
@@ -419,21 +437,25 @@ cd apps/web && pnpm add -D @types/react-plotly.js
 The implementation should proceed in this order, respecting the layered dependency direction (`types ← core ← data ← ui ← web`):
 
 ### Phase 1: Types & Data Layer
+
 1. **`packages/types/src/coordinates.ts`** — Define `NodeCoordinates`, `Node3DVizPoint`, `Component3DData`, `Visualization3DData`
 2. **`packages/types/src/index.ts`** — Export new types
 3. **`packages/data/src/importers/coordinates-csv-parser.ts`** — Streaming parser for coordinate CSV
 4. **`packages/data/src/index.ts`** — Export parser + types
 
 ### Phase 2: API Layer
+
 5. **`apps/web/src/app/api/analyze-upload/route.ts`** — Accept `coordinatesFile`, parse, join, select worst nodes, return `Visualization3DData | null`
 
 ### Phase 3: UI Layer
+
 6. Install Plotly.js dependencies in `apps/web`
 7. **`apps/web/src/components/Scatter3DChart.tsx`** — 3D scatter plot component
 8. **`apps/web/src/components/FileUpload.tsx`** — Add optional coordinates drop zone
 9. **`apps/web/src/app/analysis/page.tsx`** — Integrate 3D section into results view
 
 ### Phase 4: Testing
+
 10. Unit tests for `coordinates-csv-parser.ts` (parse header detection, data rows, edge cases)
 11. Integration test: full pipeline with coordinate file
 12. Visual validation with reference coordinate file
@@ -445,6 +467,7 @@ The implementation should proceed in this order, respecting the layered dependen
 ### Unit Tests
 
 **`coordinates-csv-parser.test.ts`**:
+
 - Parse file with standard header (6 metadata lines + column header)
 - Handle missing `Value` or `Components` columns gracefully
 - Handle files with different header offsets (dynamic detection)
@@ -454,6 +477,7 @@ The implementation should proceed in this order, respecting the layered dependen
 ### Integration Tests
 
 **Full pipeline test**:
+
 1. Use sample coordinate file + sample stress files
 2. Verify join produces matching nodeIds
 3. Verify worst 10,000 nodes are correctly sorted by minSF

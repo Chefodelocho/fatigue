@@ -42,11 +42,7 @@ import type {
 } from '@fatigue/types';
 
 import type { MaterialConfig, AnalysisHistoryEntry } from '@/lib/analysis-store';
-import {
-  saveToHistory,
-  fetchAnalysisData,
-  generateAnalysisId,
-} from '@/lib/analysis-store';
+import { saveToHistory, fetchAnalysisData, generateAnalysisId } from '@/lib/analysis-store';
 
 import AnalysisHistory from '@/components/AnalysisHistory';
 import FileUpload from '@/components/FileUpload';
@@ -126,7 +122,9 @@ export default function AnalysisPage(): JSX.Element {
   // current component on demand (opt-in, since it can be 500K+ nodes).
   // Cached per component so switching back and forth doesn't re-fetch.
   const [hdMode, setHdMode] = useState(false);
-  const [hdCache, setHdCache] = useState<Partial<Record<StressComponent, Visualization3DFullData>>>({});
+  const [hdCache, setHdCache] = useState<Partial<Record<StressComponent, Visualization3DFullData>>>(
+    {},
+  );
   const [hdLoading, setHdLoading] = useState(false);
   const [hdError, setHdError] = useState<string | null>(null);
 
@@ -139,9 +137,7 @@ export default function AnalysisPage(): JSX.Element {
     if (!data) return null;
     const compData = data.haighPointsByComponent[component];
     if (!compData) return null;
-    const filteredPoints = compData.points.filter(
-      (p) => p.goodmanSF <= sfThreshold,
-    );
+    const filteredPoints = compData.points.filter((p) => p.goodmanSF <= sfThreshold);
     return {
       goodmanLine: data.haighLines.goodmanLine,
       gerberLine: data.haighLines.gerberLine,
@@ -155,9 +151,7 @@ export default function AnalysisPage(): JSX.Element {
   const filtered3DData = useMemo(() => {
     if (!data?.visualization3D) return null;
     const compData = data.visualization3D.worstByComponent[component];
-    const filteredNodes = compData.worstNodes.filter(
-      (n) => n.minSF <= sfThreshold,
-    );
+    const filteredNodes = compData.worstNodes.filter((n) => n.minSF <= sfThreshold);
     return {
       worstNodes: filteredNodes,
       totalMatchedNodes: compData.totalMatchedNodes,
@@ -177,8 +171,20 @@ export default function AnalysisPage(): JSX.Element {
     const raw = hdCache[component];
     if (!raw) return { hdCriticalData: null, hdBackgroundData: null };
 
-    const critical = { nodeIds: [] as number[], x: [] as number[], y: [] as number[], z: [] as number[], minSF: [] as number[] };
-    const background = { nodeIds: [] as number[], x: [] as number[], y: [] as number[], z: [] as number[], minSF: [] as number[] };
+    const critical = {
+      nodeIds: [] as number[],
+      x: [] as number[],
+      y: [] as number[],
+      z: [] as number[],
+      minSF: [] as number[],
+    };
+    const background = {
+      nodeIds: [] as number[],
+      x: [] as number[],
+      y: [] as number[],
+      z: [] as number[],
+      minSF: [] as number[],
+    };
 
     for (let i = 0; i < raw.minSF.length; i++) {
       const sf = raw.minSF[i];
@@ -204,8 +210,16 @@ export default function AnalysisPage(): JSX.Element {
     }
 
     return {
-      hdCriticalData: { component: raw.component, totalMatchedNodes: critical.nodeIds.length, ...critical },
-      hdBackgroundData: { component: raw.component, totalMatchedNodes: background.nodeIds.length, ...background },
+      hdCriticalData: {
+        component: raw.component,
+        totalMatchedNodes: critical.nodeIds.length,
+        ...critical,
+      },
+      hdBackgroundData: {
+        component: raw.component,
+        totalMatchedNodes: background.nodeIds.length,
+        ...background,
+      },
     };
   }, [hdCache, component, sfThreshold]);
 
@@ -213,7 +227,9 @@ export default function AnalysisPage(): JSX.Element {
   const currentTotalPoints = data?.haighPointsByComponent[component]?.totalPoints ?? 0;
   const currentPointCount = currentHaighData?.points.length ?? 0;
   const current3DPointCount =
-    hdMode && hdCriticalData ? hdCriticalData.totalMatchedNodes : filtered3DData?.worstNodes.length ?? 0;
+    hdMode && hdCriticalData
+      ? hdCriticalData.totalMatchedNodes
+      : (filtered3DData?.worstNodes.length ?? 0);
 
   // -- Handlers ---------------------------------------------------------------
 
@@ -473,9 +489,7 @@ export default function AnalysisPage(): JSX.Element {
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-            Fatigue Analysis
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Fatigue Analysis</h1>
           <p className="mt-2 text-sm text-gray-600">
             Upload FEM data from SolidWorks Simulation, select a material, and run
             Goodman/Gerber/Soderberg analysis.
@@ -500,35 +514,49 @@ export default function AnalysisPage(): JSX.Element {
               {/* SolidWorks Export Instructions */}
               <div className="rounded-lg border border-fatigue-100 bg-gradient-to-br from-fatigue-50 to-white p-5 shadow-sm">
                 <div className="flex items-center gap-2">
-                  <svg className="h-5 w-5 text-fatigue-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
+                  <svg
+                    className="h-5 w-5 text-fatigue-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18"
+                    />
                   </svg>
                   <h3 className="text-sm font-semibold text-gray-700">
                     How to Export CSVs from SolidWorks Simulation
                   </h3>
                 </div>
                 <ol className="mt-3 space-y-1.5 text-xs text-gray-500">
-                  <li>1. Run a <strong>Static Study</strong> → right-click <strong>Results</strong> → <strong>List Stress</strong></li>
-                  <li>2. Select stress components (VON, P1, P2, P3) for each node → click <strong>Save</strong> as CSV</li>
+                  <li>
+                    1. Run a <strong>Static Study</strong> → right-click <strong>Results</strong> →{' '}
+                    <strong>List Stress</strong>
+                  </li>
+                  <li>
+                    2. Select stress components (VON, P1, P2, P3) for each node → click{' '}
+                    <strong>Save</strong> as CSV
+                  </li>
                   <li>3. Apply loading-case boundary conditions, re-run, export second CSV</li>
-                  <li>4. (Optional) <strong>List Displacement</strong> → Save as CSV for 3D visualization</li>
+                  <li>
+                    4. (Optional) <strong>List Displacement</strong> → Save as CSV for 3D
+                    visualization
+                  </li>
                 </ol>
                 <p className="mt-2 text-xs text-gray-400">
-                  Supported CAD tools: <strong>SolidWorks Simulation</strong> ✅ &nbsp;|&nbsp; ANSYS, Abaqus, Nastran, SimScale — <em>coming soon</em>
+                  Supported CAD tools: <strong>SolidWorks Simulation</strong> ✅ &nbsp;|&nbsp;
+                  ANSYS, Abaqus, Nastran, SimScale — <em>coming soon</em>
                 </p>
               </div>
 
               {/* File Upload */}
-              <FileUpload
-                files={files}
-                onFilesSelected={setFiles}
-              />
+              <FileUpload files={files} onFilesSelected={setFiles} />
 
               {/* Material Selector */}
-              <MaterialSelector
-                value={material}
-                onChange={setMaterial}
-              />
+              <MaterialSelector value={material} onChange={setMaterial} />
 
               {/* Run Analysis Button */}
               <div className="flex items-center gap-4">
@@ -647,9 +675,7 @@ export default function AnalysisPage(): JSX.Element {
               {data.visualization3D && (
                 <section>
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                    <h2 className="text-lg font-semibold text-gray-900">
-                      3D Safety Factor Map
-                    </h2>
+                    <h2 className="text-lg font-semibold text-gray-900">3D Safety Factor Map</h2>
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
@@ -664,9 +690,24 @@ export default function AnalysisPage(): JSX.Element {
                       >
                         {hdLoading ? (
                           <>
-                            <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            <svg
+                              className="h-3.5 w-3.5 animate-spin"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              />
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                              />
                             </svg>
                             Loading…
                           </>
@@ -719,18 +760,9 @@ export default function AnalysisPage(): JSX.Element {
                   Analysis Summary
                 </h2>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-                  <PropertyBadge
-                    label="Material"
-                    value={material?.name ?? 'Unknown'}
-                  />
-                  <PropertyBadge
-                    label="Nodes Analyzed"
-                    value={data.nodeCount.toLocaleString()}
-                  />
-                  <PropertyBadge
-                    label="Compute Time"
-                    value={`${data.computeTimeSeconds}s`}
-                  />
+                  <PropertyBadge label="Material" value={material?.name ?? 'Unknown'} />
+                  <PropertyBadge label="Nodes Analyzed" value={data.nodeCount.toLocaleString()} />
+                  <PropertyBadge label="Compute Time" value={`${data.computeTimeSeconds}s`} />
                   <PropertyBadge
                     label="Worst Min SF"
                     value={Math.min(
@@ -751,22 +783,30 @@ export default function AnalysisPage(): JSX.Element {
               {/* Material Change Card */}
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-5 shadow-sm">
                 <div className="flex items-center gap-2 mb-3">
-                  <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
+                  <svg
+                    className="h-5 w-5 text-blue-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"
+                    />
                   </svg>
                   <h3 className="text-sm font-semibold text-gray-700">
                     Change Material & Recompute
                   </h3>
                 </div>
                 <p className="text-xs text-gray-500 mb-3">
-                  Select a different material to instantly recompute safety factors without re-uploading files.
+                  Select a different material to instantly recompute safety factors without
+                  re-uploading files.
                 </p>
                 <div className="flex items-end gap-4">
                   <div className="flex-1">
-                    <MaterialSelector
-                      value={recomputeMaterial}
-                      onChange={setRecomputeMaterial}
-                    />
+                    <MaterialSelector value={recomputeMaterial} onChange={setRecomputeMaterial} />
                   </div>
                   <button
                     onClick={() => void handleRecompute()}
@@ -780,9 +820,7 @@ export default function AnalysisPage(): JSX.Element {
                     {isRecomputing ? 'Recomputing…' : 'Update Analysis'}
                   </button>
                 </div>
-                {error && (
-                  <p className="mt-2 text-xs text-red-600">{error}</p>
-                )}
+                {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
               </div>
             </div>
           )}
@@ -790,7 +828,10 @@ export default function AnalysisPage(): JSX.Element {
 
         {/* Sidebar: Analysis History */}
         <div className="lg:col-span-1">
-          <AnalysisHistory onLoad={handleLoadHistory} disabled={step === 'loading' || isRecomputing} />
+          <AnalysisHistory
+            onLoad={handleLoadHistory}
+            disabled={step === 'loading' || isRecomputing}
+          />
         </div>
       </div>
     </main>
@@ -799,7 +840,13 @@ export default function AnalysisPage(): JSX.Element {
 
 // -- Sub-components -----------------------------------------------------------
 
-function PropertyBadge({ label, value }: { readonly label: string; readonly value: string }): JSX.Element {
+function PropertyBadge({
+  label,
+  value,
+}: {
+  readonly label: string;
+  readonly value: string;
+}): JSX.Element {
   return (
     <div className="rounded-md bg-gray-50 px-4 py-3">
       <dt className="text-xs font-medium text-gray-500">{label}</dt>
