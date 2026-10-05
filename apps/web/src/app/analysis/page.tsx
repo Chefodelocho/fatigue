@@ -31,6 +31,22 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import {
+  api579Level1Screening,
+  evaluateFkmPrototype,
+  createABSCurve,
+  createDNVGLCurve,
+  createEN1993Curve,
+  createIIWCurve,
+  evaluateCyclesToFailure,
+  getABSFatClasses,
+  getDNVGLFatClasses,
+  getEN1993DetailCategories,
+  getIIWFatClasses,
+} from '@fatigue/core';
+
+import { createStressRange } from '@fatigue/types';
+
 import type {
   HaighDiagramData,
   HaighLinePoint,
@@ -89,6 +105,65 @@ interface AnalysisData {
 }
 
 type PageStep = 'configure' | 'loading' | 'results';
+type StandardKey =
+  | 'DIN EN 1993-1-9'
+  | 'DNVGL-RP-C203'
+  | 'ABS'
+  | 'API 579-1'
+  | 'IIW'
+  | 'FKM prototype';
+
+interface StandardOption {
+  readonly key: StandardKey;
+  readonly label: string;
+  readonly defaultClass: number;
+  readonly getClasses: () => readonly number[];
+  readonly createCurve?: (classValue: number) => ReturnType<typeof createEN1993Curve>;
+}
+
+const STANDARD_OPTIONS: readonly StandardOption[] = [
+  {
+    key: 'DIN EN 1993-1-9',
+    label: 'DIN EN 1993-1-9',
+    defaultClass: 80,
+    getClasses: getEN1993DetailCategories,
+    createCurve: (classValue: number) => createEN1993Curve(classValue),
+  },
+  {
+    key: 'DNVGL-RP-C203',
+    label: 'DNVGL-RP-C203',
+    defaultClass: 80,
+    getClasses: getDNVGLFatClasses,
+    createCurve: (classValue: number) => createDNVGLCurve(classValue),
+  },
+  {
+    key: 'ABS',
+    label: 'ABS',
+    defaultClass: 80,
+    getClasses: getABSFatClasses,
+    createCurve: (classValue: number) => createABSCurve(classValue),
+  },
+  {
+    key: 'IIW',
+    label: 'IIW',
+    defaultClass: 80,
+    getClasses: getIIWFatClasses,
+    createCurve: (classValue: number) => createIIWCurve(classValue),
+  },
+  {
+    key: 'API 579-1',
+    label: 'API 579-1',
+    defaultClass: 1,
+    getClasses: () => [1],
+    createCurve: () => ({ ok: true, value: undefined as never }),
+  },
+  {
+    key: 'FKM prototype',
+    label: 'FKM prototype (not FKM-compliant)',
+    defaultClass: 1,
+    getClasses: () => [],
+  },
+] as const;
 
 /** Steel (default material) config used for the reference example. */
 const REFERENCE_MATERIAL: MaterialConfig = {
@@ -113,6 +188,9 @@ export default function AnalysisPage(): JSX.Element {
   const [step, setStep] = useState<PageStep>('configure');
   const [data, setData] = useState<AnalysisData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedStandard, setSelectedStandard] = useState<StandardKey>('DIN EN 1993-1-9');
+  const [selectedStandardClass, setSelectedStandardClass] = useState<number>(80);
+  const [fkmTargetCycles, setFkmTargetCycles] = useState<number>(1_000_000);
 
   // Material recomputation state
   const [recomputeMaterial, setRecomputeMaterial] = useState<MaterialConfig | null>(null);
@@ -130,6 +208,21 @@ export default function AnalysisPage(): JSX.Element {
 
   // Derived: can we run the analysis?
   const canAnalyze = material !== null && files !== null;
+
+  const selectedStandardDef = STANDARD_OPTIONS.find(
+    (standard) => standard.key === selectedStandard,
+  );
+
+  if (!selectedStandardDef) {
+    throw new Error('No standard options configured');
+  }
+
+  useEffect(() => {
+    const classes = selectedStandardDef.getClasses();
+    if (!classes.includes(selectedStandardClass)) {
+      setSelectedStandardClass(classes[0] ?? 1);
+    }
+  }, [selectedStandardDef, selectedStandardClass]);
 
   // Reconstruct HaighDiagramData for the currently selected component,
   // filtered by the SF threshold slider
@@ -230,6 +323,127 @@ export default function AnalysisPage(): JSX.Element {
     hdMode && hdCriticalData
       ? hdCriticalData.totalMatchedNodes
       : (filtered3DData?.worstNodes.length ?? 0);
+
+  const standardAssessment = useMemo(() => {
+    if (!data || !material) {
+      return null;
+    }
+
+    const overallWorstSF = Math.min(
+      data.minSafetyFactors.VON.minSF,
+      data.minSafetyFactors.P1.minSF,
+      data.minSafetyFactors.P2.minSF,
+      data.minSafetyFactors.P3.minSF,
+    );
+
+    const representativeStressRange = createStressRange(
+      Math.max(material.enduranceLimit / overallWorstSF, 1),
+    );
+
+    if (selectedStandard === 'API 579-1') {
+      const screening = api579Level1Screening({
+        stressRange: representativeStressRange,
+        cycles: 1_000_000,
+        allowableCycles: 2_000_000,
+        limit: 1,
+      });
+
+      if (!screening.ok) {
+        return {
+          title: 'API 579-1',
+          status: 'Invalid inputs',
+          classLabel: 'Screening',
+          detail: screening.error,
+        };
+      }
+
+      return {
+        title: 'API 579-1',
+        status: screening.value.acceptable ? 'Pass' : 'Review',
+        classLabel: 'Screening',
+        detail: `Usage factor ${screening.value.usageFactor.toFixed(3)} against limit ${screening.value.limit.toFixed(3)} at ${representativeStressRange.toFixed(1)} MPa`,
+      };
+    }
+
+    if (selectedStandard === 'FKM prototype') {
+      const criticalNode = Object.values(data.minSafetyFactors).reduce((worst, current) =>
+        current.minSF < worst.minSF ? current : worst,
+      );
+      const assessment = evaluateFkmPrototype({
+        meanStress: criticalNode.meanStress,
+        stressAmplitude: criticalNode.alternatingStress,
+        ultimateStrength: material.ultimateStrength,
+        fatigueStrengthAtReferenceCycles: material.enduranceLimit,
+        targetCycles: fkmTargetCycles,
+      });
+
+      if (!assessment.ok) {
+        return {
+          title: 'FKM prototype (not FKM-compliant)',
+          status: 'Invalid inputs',
+          classLabel: 'Nominal stress prototype',
+          detail: assessment.error,
+        };
+      }
+
+      return {
+        title: 'FKM prototype (not FKM-compliant)',
+        status: assessment.value.acceptable ? 'Pass' : 'Review',
+        classLabel: 'Nominal stress prototype',
+        detail: `Exploratory Goodman and single-slope S-N estimate: utilization ${assessment.value.utilization.toFixed(3)} at ${fkmTargetCycles.toLocaleString()} cycles. This is not an FKM guideline assessment.`,
+      };
+    }
+
+    if (!selectedStandardDef.createCurve) {
+      return {
+        title: selectedStandard,
+        status: 'Unsupported method',
+        classLabel: `${selectedStandardClass}`,
+        detail: 'No S-N curve method is configured for this selection.',
+      };
+    }
+
+    const curveResult = selectedStandardDef.createCurve(selectedStandardClass);
+
+    if (!curveResult.ok) {
+      return {
+        title: selectedStandard,
+        status: 'Unsupported class',
+        classLabel: `${selectedStandardClass}`,
+        detail: curveResult.error,
+      };
+    }
+
+    const lifeResult = evaluateCyclesToFailure(curveResult.value, representativeStressRange, {
+      safetyFactor: 1,
+    });
+
+    if (!lifeResult.ok) {
+      return {
+        title: selectedStandard,
+        status: 'Evaluation failed',
+        classLabel: `${selectedStandardClass}`,
+        detail: lifeResult.error,
+      };
+    }
+
+    const lifeCycles = Number(lifeResult.value);
+    const isInfinite = !Number.isFinite(lifeCycles);
+
+    return {
+      title: selectedStandard,
+      status: isInfinite || lifeCycles >= 1_000_000 ? 'Pass' : 'Review',
+      classLabel: `${selectedStandardClass}`,
+      detail: `${isInfinite ? 'Infinite life' : `${lifeCycles.toLocaleString()} cycles`} at ${representativeStressRange.toFixed(1)} MPa. Worst SF = ${overallWorstSF.toFixed(2)}.`,
+    };
+  }, [
+    data,
+    fkmTargetCycles,
+    material,
+    selectedStandard,
+    selectedStandardClass,
+    selectedStandardDef,
+  ]);
 
   // -- Handlers ---------------------------------------------------------------
 
@@ -660,6 +874,85 @@ export default function AnalysisPage(): JSX.Element {
                   {current3DPointCount.toLocaleString()} 3D nodes
                 </p>
               </div>
+
+              <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <h2 className="text-lg font-semibold text-gray-900">Standard Assessment</h2>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={selectedStandard}
+                      onChange={(event) => setSelectedStandard(event.target.value as StandardKey)}
+                      className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-fatigue-500 focus:outline-none"
+                    >
+                      {STANDARD_OPTIONS.map((option) => (
+                        <option key={option.key} value={option.key}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    {selectedStandard !== 'API 579-1' && selectedStandard !== 'FKM prototype' && (
+                      <select
+                        value={selectedStandardClass}
+                        onChange={(event) => setSelectedStandardClass(Number(event.target.value))}
+                        className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-fatigue-500 focus:outline-none"
+                      >
+                        {selectedStandardDef.getClasses().map((classValue) => (
+                          <option key={classValue} value={classValue}>
+                            FAT {classValue}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {selectedStandard === 'FKM prototype' && (
+                      <label className="flex items-center gap-2 text-sm text-gray-700">
+                        Target cycles
+                        <input
+                          type="number"
+                          min={1}
+                          step={1}
+                          value={fkmTargetCycles}
+                          onChange={(event) => setFkmTargetCycles(Number(event.target.value))}
+                          className="w-32 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-fatigue-500 focus:outline-none"
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+
+                {standardAssessment ? (
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
+                      <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                        Standard
+                      </div>
+                      <div className="mt-1 text-sm font-semibold text-gray-900">
+                        {standardAssessment.title}
+                      </div>
+                    </div>
+                    <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
+                      <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                        Class
+                      </div>
+                      <div className="mt-1 text-sm font-semibold text-gray-900">
+                        {standardAssessment.classLabel}
+                      </div>
+                    </div>
+                    <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
+                      <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                        Status
+                      </div>
+                      <div className="mt-1 text-sm font-semibold text-gray-900">
+                        {standardAssessment.status}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
+                <p className="mt-3 text-sm text-gray-600">
+                  {standardAssessment?.detail ??
+                    'Select a standard to evaluate the current worst-case stress range against the active code curve.'}
+                </p>
+              </section>
 
               {/* Haigh Diagram */}
               {currentHaighData && (
