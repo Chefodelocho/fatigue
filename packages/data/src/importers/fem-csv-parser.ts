@@ -102,19 +102,34 @@ export async function parseFEMStressCSV(filePath: string): Promise<readonly Node
     const cols = line.split(',').map((c) => c.trim());
 
     // Skip empty or malformed rows
-    if (cols.length <= Math.max(colNode, colVON)) {
+    if (cols.length <= Math.max(colNode, colP1, colP2, colP3, colVON)) {
       continue;
     }
 
-    const nodeId = parseInt(cols[colNode]!, 10);
+    const nodeIdValue = cols[colNode];
+    const p1Value = cols[colP1];
+    const p2Value = cols[colP2];
+    const p3Value = cols[colP3];
+    const vonValue = cols[colVON];
+    if (
+      nodeIdValue === undefined ||
+      p1Value === undefined ||
+      p2Value === undefined ||
+      p3Value === undefined ||
+      vonValue === undefined
+    ) {
+      continue;
+    }
+
+    const nodeId = parseInt(nodeIdValue, 10);
     if (Number.isNaN(nodeId)) {
       continue; // Skip non-numeric rows
     }
 
-    const p1 = parseFloat(cols[colP1]!);
-    const p2 = parseFloat(cols[colP2]!);
-    const p3 = parseFloat(cols[colP3]!);
-    const von = parseFloat(cols[colVON]!);
+    const p1 = parseFloat(p1Value);
+    const p2 = parseFloat(p2Value);
+    const p3 = parseFloat(p3Value);
+    const von = parseFloat(vonValue);
 
     // Skip rows with NaN stress values
     if (Number.isNaN(von)) {
@@ -167,7 +182,7 @@ export async function loadFEMNodeStress(
   if (baseRows.length !== loadRows.length) {
     console.warn(
       `[fem-csv-parser] Row count mismatch: base=${baseRows.length}, load=${loadRows.length}. ` +
-      'Using matching nodes only.',
+        'Using matching nodes only.',
     );
   }
 

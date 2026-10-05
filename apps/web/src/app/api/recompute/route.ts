@@ -26,10 +26,7 @@ import {
 } from '@/lib/analysis-helpers';
 import { getParsedData } from '@/lib/parsed-data-cache';
 import { setAnalysisResult } from '@/lib/analysis-result-cache';
-import {
-  applySessionCookie,
-  getOrCreateSessionId,
-} from '@/lib/session-cookie';
+import { applySessionCookie, getOrCreateSessionId } from '@/lib/session-cookie';
 
 // -- Configuration -----------------------------------------------------------
 
@@ -123,8 +120,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       yieldLine: firstHaigh.yieldLine,
     };
 
-    const haighPointsByComponent: Record<StressComponent, ComponentHaighData> =
-      {} as Record<StressComponent, ComponentHaighData>;
+    const haighPointsByComponent: Record<StressComponent, ComponentHaighData> = {} as Record<
+      StressComponent,
+      ComponentHaighData
+    >;
 
     haighPointsByComponent.VON = {
       points: selectWorstPoints(firstHaigh.points, MAX_SCATTER_POINTS),
@@ -134,11 +133,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     for (const comp of ALL_COMPONENTS) {
       if (comp === 'VON') continue;
 
-      const compHaigh = generateHaighDiagramData(
-        result.material,
-        result.safetyFactors[comp],
-        comp,
-      );
+      const compHaigh = generateHaighDiagramData(result.material, result.safetyFactors[comp], comp);
 
       haighPointsByComponent[comp] = {
         points: selectWorstPoints(compHaigh.points, MAX_SCATTER_POINTS),
@@ -175,9 +170,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('[api/recompute] Error:', message);
-    return NextResponse.json(
-      { error: 'Recomputation failed', details: message },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: 'Recomputation failed', details: message }, { status: 500 });
   }
 }

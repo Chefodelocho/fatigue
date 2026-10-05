@@ -18,12 +18,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 
-import type {
-  HaighDiagramData,
-  HaighLinePoint,
-  HaighPoint,
-  StressComponent,
-} from '@fatigue/types';
+import type { HaighDiagramData, HaighLinePoint, HaighPoint, StressComponent } from '@fatigue/types';
 
 import ChartSpinner from '@/components/ChartSpinner';
 
@@ -78,10 +73,7 @@ export default function HaighDiagram({ data, component }: HaighDiagramProps) {
     [data.points, component],
   );
 
-  const layout = useMemo(
-    () => buildLayout(component),
-    [component],
-  );
+  const layout = useMemo(() => buildLayout(component), [component]);
 
   const traces = [goodmanTrace, gerberTrace, soderbergTrace, yieldTrace, scatterTrace];
 
@@ -180,12 +172,12 @@ function buildScatterTrace(points: readonly HaighPoint[], component: StressCompo
       cmin: Math.max(0, sfMin),
       cmax: Math.min(sfMax, 5),
       colorscale: [
-        [0.0, '#ef4444'],    // red — failure (SF < 1)
-        [0.2, '#f97316'],    // orange — marginal
-        [0.4, '#eab308'],    // yellow — approaching safe
-        [0.6, '#84cc16'],    // lime — safe
-        [0.8, '#22c55e'],    // green — well safe
-        [1.0, '#16a34a'],    // dark green — very safe
+        [0.0, '#ef4444'], // red — failure (SF < 1)
+        [0.2, '#f97316'], // orange — marginal
+        [0.4, '#eab308'], // yellow — approaching safe
+        [0.6, '#84cc16'], // lime — safe
+        [0.8, '#22c55e'], // green — well safe
+        [1.0, '#16a34a'], // dark green — very safe
       ],
       colorbar: {
         title: {

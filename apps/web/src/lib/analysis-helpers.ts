@@ -118,8 +118,10 @@ export function buildVisualization3D(
   },
   maxPoints: number,
 ): Visualization3DData | null {
-  const worstByComponent: Record<StressComponent, Component3DData> =
-    {} as Record<StressComponent, Component3DData>;
+  const worstByComponent: Record<StressComponent, Component3DData> = {} as Record<
+    StressComponent,
+    Component3DData
+  >;
 
   let totalMatchedNodes = 0;
   const allMatchedCoords: NodeCoordinates[] = [];

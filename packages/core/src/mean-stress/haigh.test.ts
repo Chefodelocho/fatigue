@@ -38,6 +38,14 @@ function findPointNearMean(
   }, undefined);
 }
 
+function requireDefined<T>(value: T | undefined): T {
+  if (value === undefined) {
+    throw new Error('Expected value to be defined');
+  }
+
+  return value;
+}
+
 /**
  * Helper: create a minimal NodeSafetyFactors object for testing.
  */
@@ -77,29 +85,26 @@ describe('generateHaighDiagramData', () => {
   describe('Goodman line', () => {
     it('should start at (0, σe) = (0, 250)', () => {
       const result = generateHaighDiagramData(MATERIAL, [], 'VON');
-      const pt = findPointNearMean(result.goodmanLine, 0);
+      const pt = requireDefined(findPointNearMean(result.goodmanLine, 0));
 
-      expect(pt).toBeDefined();
-      expect(Math.abs(pt!.mean)).toBeLessThan(1); // Near σm = 0
-      expect(pt!.alternating).toBeCloseTo(250, 1);
+      expect(Math.abs(pt.mean)).toBeLessThan(1); // Near σm = 0
+      expect(pt.alternating).toBeCloseTo(250, 1);
     });
 
     it('should end at (σu, 0) = (500, 0)', () => {
       const result = generateHaighDiagramData(MATERIAL, [], 'VON');
-      const pt = findPointNearMean(result.goodmanLine, 500);
+      const pt = requireDefined(findPointNearMean(result.goodmanLine, 500));
 
-      expect(pt).toBeDefined();
-      expect(Math.abs(pt!.mean - 500)).toBeLessThan(STRESS_TOLERANCE * 100);
-      expect(pt!.alternating).toBeCloseTo(0, 1);
+      expect(Math.abs(pt.mean - 500)).toBeLessThan(STRESS_TOLERANCE * 100);
+      expect(pt.alternating).toBeCloseTo(0, 1);
     });
 
     it('should have σa > 0 at σm = -σu (compressive region)', () => {
       // Goodman line: σa = σe × (1 - σm/σu) = 250 × (1 - (-500)/500) = 250 × 2 = 500
       const result = generateHaighDiagramData(MATERIAL, [], 'VON');
-      const pt = findPointNearMean(result.goodmanLine, -500);
+      const pt = requireDefined(findPointNearMean(result.goodmanLine, -500));
 
-      expect(pt).toBeDefined();
-      expect(pt!.alternating).toBeCloseTo(500, 1);
+      expect(pt.alternating).toBeCloseTo(500, 1);
     });
 
     it('should be linear (constant slope between endpoints)', () => {
@@ -119,23 +124,20 @@ describe('generateHaighDiagramData', () => {
   describe('Gerber parabola', () => {
     it('should peak at (0, σe) = (0, 250)', () => {
       const result = generateHaighDiagramData(MATERIAL, [], 'VON');
-      const pt = findPointNearMean(result.gerberLine, 0);
+      const pt = requireDefined(findPointNearMean(result.gerberLine, 0));
 
-      expect(pt).toBeDefined();
-      expect(Math.abs(pt!.mean)).toBeLessThan(1);
-      expect(pt!.alternating).toBeCloseTo(250, 1);
+      expect(Math.abs(pt.mean)).toBeLessThan(1);
+      expect(pt.alternating).toBeCloseTo(250, 1);
     });
 
     it('should touch zero at σm = ±σu', () => {
       const result = generateHaighDiagramData(MATERIAL, [], 'VON');
 
-      const atPlusU = findPointNearMean(result.gerberLine, 500);
-      const atMinusU = findPointNearMean(result.gerberLine, -500);
+      const atPlusU = requireDefined(findPointNearMean(result.gerberLine, 500));
+      const atMinusU = requireDefined(findPointNearMean(result.gerberLine, -500));
 
-      expect(atPlusU).toBeDefined();
-      expect(atMinusU).toBeDefined();
-      expect(atPlusU!.alternating).toBeCloseTo(0, 1);
-      expect(atMinusU!.alternating).toBeCloseTo(0, 1);
+      expect(atPlusU.alternating).toBeCloseTo(0, 1);
+      expect(atMinusU.alternating).toBeCloseTo(0, 1);
     });
 
     it('should be symmetric about σm = 0', () => {
@@ -169,20 +171,18 @@ describe('generateHaighDiagramData', () => {
   describe('Soderberg line', () => {
     it('should start at (0, σe) = (0, 250)', () => {
       const result = generateHaighDiagramData(MATERIAL, [], 'VON');
-      const pt = findPointNearMean(result.soderbergLine, 0);
+      const pt = requireDefined(findPointNearMean(result.soderbergLine, 0));
 
-      expect(pt).toBeDefined();
-      expect(Math.abs(pt!.mean)).toBeLessThan(1);
-      expect(pt!.alternating).toBeCloseTo(250, 1);
+      expect(Math.abs(pt.mean)).toBeLessThan(1);
+      expect(pt.alternating).toBeCloseTo(250, 1);
     });
 
     it('should end at (σy, 0) = (350, 0)', () => {
       const result = generateHaighDiagramData(MATERIAL, [], 'VON');
-      const pt = findPointNearMean(result.soderbergLine, 350);
+      const pt = requireDefined(findPointNearMean(result.soderbergLine, 350));
 
-      expect(pt).toBeDefined();
-      expect(Math.abs(pt!.mean - 350)).toBeLessThan(STRESS_TOLERANCE * 100);
-      expect(pt!.alternating).toBeCloseTo(0, 1);
+      expect(Math.abs(pt.mean - 350)).toBeLessThan(STRESS_TOLERANCE * 100);
+      expect(pt.alternating).toBeCloseTo(0, 1);
     });
 
     it('should not extend beyond ±σy on the σm axis', () => {
@@ -199,23 +199,20 @@ describe('generateHaighDiagramData', () => {
   describe('Yield boundary', () => {
     it('should peak at (0, σy) = (0, 350)', () => {
       const result = generateHaighDiagramData(MATERIAL, [], 'VON');
-      const pt = findPointNearMean(result.yieldLine, 0);
+      const pt = requireDefined(findPointNearMean(result.yieldLine, 0));
 
-      expect(pt).toBeDefined();
-      expect(Math.abs(pt!.mean)).toBeLessThan(1);
-      expect(pt!.alternating).toBeCloseTo(350, 1);
+      expect(Math.abs(pt.mean)).toBeLessThan(1);
+      expect(pt.alternating).toBeCloseTo(350, 1);
     });
 
     it('should touch zero at σm = ±σy', () => {
       const result = generateHaighDiagramData(MATERIAL, [], 'VON');
 
-      const atPlusY = findPointNearMean(result.yieldLine, 350);
-      const atMinusY = findPointNearMean(result.yieldLine, -350);
+      const atPlusY = requireDefined(findPointNearMean(result.yieldLine, 350));
+      const atMinusY = requireDefined(findPointNearMean(result.yieldLine, -350));
 
-      expect(atPlusY).toBeDefined();
-      expect(atMinusY).toBeDefined();
-      expect(atPlusY!.alternating).toBeCloseTo(0, 1);
-      expect(atMinusY!.alternating).toBeCloseTo(0, 1);
+      expect(atPlusY.alternating).toBeCloseTo(0, 1);
+      expect(atMinusY.alternating).toBeCloseTo(0, 1);
     });
 
     it('should form a triangle with vertices at (−σy, 0), (0, σy), (σy, 0)', () => {
@@ -248,21 +245,20 @@ describe('generateHaighDiagramData', () => {
       const result = generateHaighDiagramData(MATERIAL, nodeData, 'VON');
 
       expect(result.points).toHaveLength(2);
-      expect(result.points[0]!.nodeId).toBe(1);
-      expect(result.points[1]!.nodeId).toBe(3);
+      expect(requireDefined(result.points[0]).nodeId).toBe(1);
+      expect(requireDefined(result.points[1]).nodeId).toBe(3);
     });
 
     it('should preserve mean and alternating stress in scatter points', () => {
-      const nodeData: NodeSafetyFactors[] = [
-        makeNodeSF(1, 'VON', 100, 200),
-      ];
+      const nodeData: NodeSafetyFactors[] = [makeNodeSF(1, 'VON', 100, 200)];
 
       const result = generateHaighDiagramData(MATERIAL, nodeData, 'VON');
 
       expect(result.points).toHaveLength(1);
-      expect(result.points[0]!.mean).toBe(200);
-      expect(result.points[0]!.alternating).toBe(100);
-      expect(result.points[0]!.stressComponent).toBe('VON');
+      const point = requireDefined(result.points[0]);
+      expect(point.mean).toBe(200);
+      expect(point.alternating).toBe(100);
+      expect(point.stressComponent).toBe('VON');
     });
   });
 

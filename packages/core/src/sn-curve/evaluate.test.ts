@@ -38,7 +38,9 @@ describe('evaluateCyclesToFailure', () => {
 
   it('reduces life when safety factor is applied', () => {
     const noFactor = evaluateCyclesToFailure(CURVE, createStressRange(90));
-    const withFactor = evaluateCyclesToFailure(CURVE, createStressRange(90), { safetyFactor: 1.35 });
+    const withFactor = evaluateCyclesToFailure(CURVE, createStressRange(90), {
+      safetyFactor: 1.35,
+    });
 
     expect(noFactor.ok).toBe(true);
     expect(withFactor.ok).toBe(true);

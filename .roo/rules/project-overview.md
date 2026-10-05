@@ -1,12 +1,15 @@
 # Fatigue Analysis Tool - Project Overview
 
 ## Project Name
+
 **Fatigue** — A modern, web-based fatigue analysis tool for structural and mechanical engineering.
 
 ## Vision
+
 Provide an open-source, extensible platform for performing fatigue life assessments using industry-standard methodologies. The tool should support multiple fatigue analysis standards and provide interactive visualizations for engineers.
 
 ## Technology Stack
+
 - **Runtime**: Node.js (v20+)
 - **Language**: TypeScript (strict mode)
 - **Frontend**: Next.js 14+ (App Router), React 18+
@@ -18,6 +21,7 @@ Provide an open-source, extensible platform for performing fatigue life assessme
 - **Package Manager**: pnpm
 
 ## Monorepo Structure
+
 ```
 fatigue/
 ├── apps/
@@ -34,6 +38,7 @@ fatigue/
 ```
 
 ## Key Domain Concepts
+
 - **S-N Curve**: Stress vs. number of cycles to failure relationship for materials
 - **Rainflow Counting**: Cycle counting algorithm per ASTM E1049
 - **Miner's Rule**: Linear cumulative damage accumulation (Palmgren-Miner)
@@ -43,6 +48,7 @@ fatigue/
 - **Load Spectrum**: Distribution of stress ranges and their occurrence counts
 
 ## Supported Analysis Standards (Planned)
+
 - DIN EN 1993-1-9 (Eurocode 3 - Steel structures)
 - DNVGL-RP-C203 (Offshore structures)
 - ABS (American Bureau of Shipping)
@@ -50,6 +56,7 @@ fatigue/
 - IIW (International Institute of Welding)
 
 ## Development Phases
+
 1. **Phase 1**: Core engine — S-N curves, rainflow counting, Miner's rule
 2. **Phase 2**: Data pipeline — CSV import, signal processing, load spectra
 3. **Phase 3**: Web UI — Interactive dashboard, plot components, input forms
@@ -57,6 +64,7 @@ fatigue/
 5. **Phase 5**: Advanced features — Probabilistic analysis, FEA integration
 
 ## Coding Conventions
+
 - Use TypeScript strict mode everywhere
 - All numerical values must have explicit units (use branded types for unit safety)
 - Every calculation function must have corresponding test cases

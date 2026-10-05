@@ -15,9 +15,13 @@ export default function QuickStartPage() {
           <h2 className="text-lg font-semibold text-gray-900">1. Export from SolidWorks</h2>
           <ol className="mt-3 space-y-3 text-sm leading-6 text-gray-600">
             <li>Run your static study.</li>
-            <li>Right-click <strong>Results</strong> and choose <strong>List Stress</strong>.</li>
+            <li>
+              Right-click <strong>Results</strong> and choose <strong>List Stress</strong>.
+            </li>
             <li>Export the base case and loading case as CSV files.</li>
-            <li>Optional: export node coordinates with <strong>List Displacement</strong> for 3D view.</li>
+            <li>
+              Optional: export node coordinates with <strong>List Displacement</strong> for 3D view.
+            </li>
           </ol>
         </section>
 
@@ -26,7 +30,9 @@ export default function QuickStartPage() {
           <ol className="mt-3 space-y-3 text-sm leading-6 text-gray-600">
             <li>Go to the analysis page and upload the two CSV files.</li>
             <li>Select a material or keep the default steel.</li>
-            <li>Click <strong>Run Fatigue Analysis</strong>.</li>
+            <li>
+              Click <strong>Run Fatigue Analysis</strong>.
+            </li>
           </ol>
         </section>
 

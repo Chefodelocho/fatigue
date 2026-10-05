@@ -62,6 +62,7 @@ Open [http://localhost:3000](http://localhost:3000).
 Drop in a SolidWorks FEM CSV export and set material properties before running the analysis.
 
 <!-- Add screenshot: drag-and-drop upload panel with material selector -->
+
 ![Upload Interface](docs/screenshots/01-upload.png)
 
 ---
@@ -71,6 +72,7 @@ Drop in a SolidWorks FEM CSV export and set material properties before running t
 Interactive σ_m vs σ_a diagram with Goodman, Gerber, and Soderberg failure envelopes overlaid on the FEM node scatter. Click any node for its coordinates and safety factor.
 
 <!-- Add screenshot: Haigh diagram with node scatter and failure lines -->
+
 ![Haigh Diagram](docs/screenshots/02-haigh-diagram.png)
 
 ---
@@ -80,6 +82,7 @@ Interactive σ_m vs σ_a diagram with Goodman, Gerber, and Soderberg failure env
 All FEM nodes plotted in 3D space, coloured by safety factor. Rotate, zoom, and hover to inspect any node. Switch between Von Mises, P1, P2, and P3 instantly.
 
 <!-- Add screenshot: 3D scatter plot coloured by safety factor -->
+
 ![3D Safety Factor Scatter](docs/screenshots/03-3d-scatter.png)
 
 ---
@@ -89,6 +92,7 @@ All FEM nodes plotted in 3D space, coloured by safety factor. Rotate, zoom, and 
 Session-saved analyses listed for easy comparison. Re-run with a different material or standard without re-uploading your data.
 
 <!-- Add screenshot: analysis history sidebar/table -->
+
 ![Analysis History](docs/screenshots/04-results-table.png)
 
 ---
@@ -98,6 +102,7 @@ Session-saved analyses listed for easy comparison. Re-run with a different mater
 Example SolidWorks FEM result export used as input. Export as CSV from the Results section of a Simulation study.
 
 <!-- Add screenshot: SolidWorks FEM results table or export dialog -->
+
 ![SolidWorks Export](docs/screenshots/05-solidworks-export.png)
 
 > **To add screenshots:** place `.png` files in `docs/screenshots/` with the filenames above, then remove the HTML comment on that line.
@@ -106,33 +111,33 @@ Example SolidWorks FEM result export used as input. Export as CSV from the Resul
 
 ## Key Features
 
-| Feature | Details |
-|---|---|
-| **Haigh Diagram** | Interactive σ_m vs σ_a plot with Goodman, Gerber & Soderberg lines |
-| **Safety Factors** | Per-node SF across Von Mises, P1, P2, and P3 stress components |
-| **3D Scatter Plot** | Full mesh visualisation coloured by safety factor; rotate & zoom |
-| **Mean Stress Correction** | Goodman, Gerber, Soderberg, Morrow |
-| **SolidWorks CSV Import** | Direct import of FEM stress result exports |
-| **Rainflow Counting** | ASTM E1049-compliant cycle extraction |
-| **Cumulative Damage** | Palmgren-Miner linear damage accumulation |
-| **Session Caching** | Each browser session is isolated — safe for multi-user deployments |
-| **Docker Ready** | Multi-stage build, health checks, non-root user |
+| Feature                    | Details                                                            |
+| -------------------------- | ------------------------------------------------------------------ |
+| **Haigh Diagram**          | Interactive σ_m vs σ_a plot with Goodman, Gerber & Soderberg lines |
+| **Safety Factors**         | Per-node SF across Von Mises, P1, P2, and P3 stress components     |
+| **3D Scatter Plot**        | Full mesh visualisation coloured by safety factor; rotate & zoom   |
+| **Mean Stress Correction** | Goodman, Gerber, Soderberg, Morrow                                 |
+| **SolidWorks CSV Import**  | Direct import of FEM stress result exports                         |
+| **Rainflow Counting**      | ASTM E1049-compliant cycle extraction                              |
+| **Cumulative Damage**      | Palmgren-Miner linear damage accumulation                          |
+| **Session Caching**        | Each browser session is isolated — safe for multi-user deployments |
+| **Docker Ready**           | Multi-stage build, health checks, non-root user                    |
 
 ---
 
 ## Technology Stack
 
-| Layer | Technology |
-|---|---|
-| Language | TypeScript (strict) |
-| Frontend | Next.js 14, React 18 |
-| Visualisation | Plotly.js |
-| Styling | Tailwind CSS |
-| State | Zustand |
-| Testing | Vitest, Playwright |
-| Packages | pnpm workspaces |
-| Container | Docker, Docker Compose |
-| CI/CD | GitHub Actions |
+| Layer         | Technology             |
+| ------------- | ---------------------- |
+| Language      | TypeScript (strict)    |
+| Frontend      | Next.js 14, React 18   |
+| Visualisation | Plotly.js              |
+| Styling       | Tailwind CSS           |
+| State         | Zustand                |
+| Testing       | Vitest, Playwright     |
+| Packages      | pnpm workspaces        |
+| Container     | Docker, Docker Compose |
+| CI/CD         | GitHub Actions         |
 
 ---
 
@@ -164,14 +169,14 @@ fatigue/
 
 ## API Endpoints
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/health` | Health check for container orchestration |
-| `GET` | `/api/analyze` | Analyse built-in sample dataset |
-| `POST` | `/api/analyze-upload` | Upload and analyse a SolidWorks CSV |
-| `POST` | `/api/recompute` | Re-run with different material (uses cached parse) |
-| `GET` | `/api/analyses` | List saved analyses for the current session |
-| `GET` | `/api/analyses/[id]` | Retrieve a specific saved analysis |
+| Method | Endpoint              | Description                                        |
+| ------ | --------------------- | -------------------------------------------------- |
+| `GET`  | `/api/health`         | Health check for container orchestration           |
+| `GET`  | `/api/analyze`        | Analyse built-in sample dataset                    |
+| `POST` | `/api/analyze-upload` | Upload and analyse a SolidWorks CSV                |
+| `POST` | `/api/recompute`      | Re-run with different material (uses cached parse) |
+| `GET`  | `/api/analyses`       | List saved analyses for the current session        |
+| `GET`  | `/api/analyses/[id]`  | Retrieve a specific saved analysis                 |
 
 Session isolation is handled via a `fatigue-session-id` cookie — each browser gets its own result cache, making multi-user Docker deployments safe without any authentication setup.
 
@@ -203,15 +208,15 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 
 ## Development Commands
 
-| Command | Description |
-|---|---|
-| `pnpm dev` | Start dev server |
-| `pnpm build` | Build all packages |
-| `pnpm test` | Run all tests |
-| `pnpm lint` | Lint all packages |
+| Command          | Description             |
+| ---------------- | ----------------------- |
+| `pnpm dev`       | Start dev server        |
+| `pnpm build`     | Build all packages      |
+| `pnpm test`      | Run all tests           |
+| `pnpm lint`      | Lint all packages       |
 | `pnpm typecheck` | Type-check all packages |
-| `pnpm format` | Format with Prettier |
-| `pnpm clean` | Remove build artefacts |
+| `pnpm format`    | Format with Prettier    |
+| `pnpm clean`     | Remove build artefacts  |
 
 ---
 

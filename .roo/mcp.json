@@ -1,38 +1,31 @@
 {
-	"mcpServers": {
-		"filesystem": {
-			"command": "npx",
-			"args": [
-				"-y",
-				"@modelcontextprotocol/server-filesystem",
-				"/home/sergio/fatigue"
-			],
-			"alwaysAllow": [
-				"write_file",
-				"read_text_file",
-				"directory_tree",
-				"read_file",
-				"read_media_file",
-				"read_multiple_files",
-				"edit_file",
-				"create_directory",
-				"list_directory",
-				"list_directory_with_sizes",
-				"move_file",
-				"search_files",
-				"get_file_info",
-				"list_allowed_directories"
-			]
-		},
-		"github": {
-			"command": "npx",
-			"args": [
-				"-y",
-				"@modelcontextprotocol/server-github"
-			],
-			"env": {
-				"GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
-			}
-		}
-	}
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/home/sergio/fatigue"],
+      "alwaysAllow": [
+        "write_file",
+        "read_text_file",
+        "directory_tree",
+        "read_file",
+        "read_media_file",
+        "read_multiple_files",
+        "edit_file",
+        "create_directory",
+        "list_directory",
+        "list_directory_with_sizes",
+        "move_file",
+        "search_files",
+        "get_file_info",
+        "list_allowed_directories"
+      ]
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      }
+    }
+  }
 }

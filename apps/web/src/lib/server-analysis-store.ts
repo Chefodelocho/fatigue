@@ -127,10 +127,7 @@ export async function getAnalysis(id: string): Promise<StoredAnalysisEntry | nul
  *
  * If the total count exceeds MAX_ENTRIES, the oldest entries are evicted.
  */
-export async function saveAnalysis(
-  sessionId: string,
-  entry: StoredAnalysisEntry,
-): Promise<void> {
+export async function saveAnalysis(sessionId: string, entry: StoredAnalysisEntry): Promise<void> {
   await ensureDir();
 
   // Enforce max entries per browser session — evict oldest
@@ -142,11 +139,7 @@ export async function saveAnalysis(
     }
   }
 
-  await writeFile(
-    filePath(entry.id),
-    JSON.stringify({ ...entry, sessionId }),
-    'utf-8',
-  );
+  await writeFile(filePath(entry.id), JSON.stringify({ ...entry, sessionId }), 'utf-8');
 }
 
 /**

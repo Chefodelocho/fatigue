@@ -56,8 +56,7 @@ export function computeSafetyFactors(
     (v) => !Number.isNaN(v) && Number.isFinite(v),
   );
 
-  const minSF =
-    validSFs.length > 0 ? Math.min(...validSFs) : NaN;
+  const minSF = validSFs.length > 0 ? Math.min(...validSFs) : NaN;
 
   return {
     nodeId,

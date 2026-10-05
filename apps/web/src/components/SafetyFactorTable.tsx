@@ -70,32 +70,59 @@ function formatSF(sf: number): string {
  */
 export default function SafetyFactorTable({ minSafetyFactors }: SafetyFactorTableProps) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm" data-testid="safety-factor-table">
+    <div
+      className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm"
+      data-testid="safety-factor-table"
+    >
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
-            <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th
+              scope="col"
+              className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+            >
               Stress Component
             </th>
-            <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th
+              scope="col"
+              className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
+            >
               Node ID
             </th>
-            <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th
+              scope="col"
+              className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
+            >
               σ<sub>m</sub> (MPa)
             </th>
-            <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th
+              scope="col"
+              className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
+            >
               σ<sub>a</sub> (MPa)
             </th>
-            <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th
+              scope="col"
+              className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
+            >
               Goodman SF
             </th>
-            <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th
+              scope="col"
+              className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
+            >
               Gerber SF
             </th>
-            <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th
+              scope="col"
+              className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
+            >
               Soderberg SF
             </th>
-            <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th
+              scope="col"
+              className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
+            >
               Min SF
             </th>
           </tr>
@@ -117,16 +144,24 @@ export default function SafetyFactorTable({ minSafetyFactors }: SafetyFactorTabl
                 <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-700">
                   {sf.alternatingStress.toFixed(2)}
                 </td>
-                <td className={`whitespace-nowrap px-4 py-3 text-right text-sm ${sfCellClass(sf.goodmanSF)}`}>
+                <td
+                  className={`whitespace-nowrap px-4 py-3 text-right text-sm ${sfCellClass(sf.goodmanSF)}`}
+                >
                   {formatSF(sf.goodmanSF)}
                 </td>
-                <td className={`whitespace-nowrap px-4 py-3 text-right text-sm ${sfCellClass(sf.gerberSF)}`}>
+                <td
+                  className={`whitespace-nowrap px-4 py-3 text-right text-sm ${sfCellClass(sf.gerberSF)}`}
+                >
                   {formatSF(sf.gerberSF)}
                 </td>
-                <td className={`whitespace-nowrap px-4 py-3 text-right text-sm ${sfCellClass(sf.soderbergSF)}`}>
+                <td
+                  className={`whitespace-nowrap px-4 py-3 text-right text-sm ${sfCellClass(sf.soderbergSF)}`}
+                >
                   {formatSF(sf.soderbergSF)}
                 </td>
-                <td className={`whitespace-nowrap px-4 py-3 text-right text-sm ${sfCellClass(sf.minSF)}`}>
+                <td
+                  className={`whitespace-nowrap px-4 py-3 text-right text-sm ${sfCellClass(sf.minSF)}`}
+                >
                   {formatSF(sf.minSF)}
                 </td>
               </tr>

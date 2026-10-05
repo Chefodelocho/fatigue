@@ -190,10 +190,7 @@ export function buildCacheKey(prefix: string, sessionId: string): string {
  * @param response        - The response to attach the cookie to
  * @param setCookieHeader - The header value from `SessionCookieResult`, or `null`
  */
-export function applySessionCookie(
-  response: NextResponse,
-  setCookieHeader: string | null,
-): void {
+export function applySessionCookie(response: NextResponse, setCookieHeader: string | null): void {
   if (setCookieHeader) {
     response.headers.set('Set-Cookie', setCookieHeader);
   }

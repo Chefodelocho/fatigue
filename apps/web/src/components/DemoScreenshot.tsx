@@ -41,7 +41,13 @@ export default function DemoScreenshot({ src, alt, label, description }: DemoScr
           />
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 p-4 text-center text-gray-400">
-            <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <svg
+              className="h-8 w-8"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"

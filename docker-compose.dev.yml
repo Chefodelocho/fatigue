@@ -14,7 +14,7 @@
 services:
   fatigue-web:
     build:
-      target: build  # Use build stage (has all deps + built packages)
+      target: build # Use build stage (has all deps + built packages)
     image: fatigue/fatigue-web:dev
     environment:
       - NODE_ENV=development

@@ -9,15 +9,8 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 
-import {
-  listAnalyses,
-  saveAnalysis,
-  type StoredAnalysisEntry,
-} from '@/lib/server-analysis-store';
-import {
-  applySessionCookie,
-  getOrCreateSessionId,
-} from '@/lib/session-cookie';
+import { listAnalyses, saveAnalysis, type StoredAnalysisEntry } from '@/lib/server-analysis-store';
+import { applySessionCookie, getOrCreateSessionId } from '@/lib/session-cookie';
 
 /**
  * GET /api/analyses

@@ -10,10 +10,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
 import { getAnalysis, deleteAnalysis } from '@/lib/server-analysis-store';
-import {
-  applySessionCookie,
-  getOrCreateSessionId,
-} from '@/lib/session-cookie';
+import { applySessionCookie, getOrCreateSessionId } from '@/lib/session-cookie';
 
 /**
  * GET /api/analyses/[id]

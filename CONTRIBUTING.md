@@ -60,17 +60,17 @@ pnpm install
 
 ### Development Commands
 
-| Command               | Description                        |
-|-----------------------|------------------------------------|
-| `pnpm dev`            | Start Next.js development server   |
-| `pnpm build`          | Build all packages                  |
-| `pnpm test`           | Run all tests                       |
-| `pnpm test:watch`     | Run tests in watch mode             |
-| `pnpm lint`           | Lint all packages                   |
-| `pnpm format`         | Format code with Prettier           |
-| `pnpm format:check`   | Check formatting without writing    |
-| `pnpm clean`          | Clean build artifacts               |
-| `pnpm typecheck`      | Type-check all packages             |
+| Command             | Description                      |
+| ------------------- | -------------------------------- |
+| `pnpm dev`          | Start Next.js development server |
+| `pnpm build`        | Build all packages               |
+| `pnpm test`         | Run all tests                    |
+| `pnpm test:watch`   | Run tests in watch mode          |
+| `pnpm lint`         | Lint all packages                |
+| `pnpm format`       | Format code with Prettier        |
+| `pnpm format:check` | Check formatting without writing |
+| `pnpm clean`        | Clean build artifacts            |
+| `pnpm typecheck`    | Type-check all packages          |
 
 ### Docker Development
 
@@ -130,9 +130,7 @@ type Cycles = Brand<number, 'Cycles'>;
 All calculation functions return a `Result<T, E>` type instead of throwing:
 
 ```typescript
-type Result<T, E = Error> =
-  | { ok: true; value: T }
-  | { ok: false; error: E };
+type Result<T, E = Error> = { ok: true; value: T } | { ok: false; error: E };
 ```
 
 ### Import Order
@@ -168,12 +166,12 @@ pnpm --filter @fatigue/core test  # Single package
 
 ### Coverage Requirements
 
-| Layer    | Branch/Line Coverage |
-|----------|---------------------|
-| Core     | 100% branch         |
-| Data     | 90% line            |
-| UI       | 80% line            |
-| Web      | 80% line            |
+| Layer | Branch/Line Coverage |
+| ----- | -------------------- |
+| Core  | 100% branch          |
+| Data  | 90% line             |
+| UI    | 80% line             |
+| Web   | 80% line             |
 
 ## Pull Request Process
 

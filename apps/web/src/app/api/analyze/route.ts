@@ -48,10 +48,7 @@ import {
 import { setParsedData } from '@/lib/parsed-data-cache';
 import { setAnalysisResult } from '@/lib/analysis-result-cache';
 import { getOrComputeDemoAnalysis, type DemoAnalysisCacheEntry } from '@/lib/demo-analysis-cache';
-import {
-  getOrCreateSessionId,
-  applySessionCookie,
-} from '@/lib/session-cookie';
+import { getOrCreateSessionId, applySessionCookie } from '@/lib/session-cookie';
 
 // -- Configuration -----------------------------------------------------------
 
@@ -108,10 +105,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('[api/analyze] Error:', message);
 
-    return NextResponse.json(
-      { error: 'Analysis failed', details: message },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: 'Analysis failed', details: message }, { status: 500 });
   }
 }
 
@@ -125,7 +119,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
  */
 async function computeAnalysis(): Promise<DemoAnalysisCacheEntry> {
   const startTime = performance.now();
-  console.log('[api/analyze] No cached demo result yet — loading CSV files and running analysis...');
+  console.log(
+    '[api/analyze] No cached demo result yet — loading CSV files and running analysis...',
+  );
 
   // Resolve file paths relative to the monorepo root
   const projectRoot = path.join(process.cwd(), '../..');
@@ -194,11 +190,7 @@ function buildResponse(
 ): AnalysisResponse {
   // Generate Haigh diagram for the first component to extract the failure lines
   // (lines are identical for all components — they only depend on material)
-  const firstHaigh = generateHaighDiagramData(
-    result.material,
-    result.safetyFactors.VON,
-    'VON',
-  );
+  const firstHaigh = generateHaighDiagramData(result.material, result.safetyFactors.VON, 'VON');
 
   const haighLines: HaighLines = {
     goodmanLine: firstHaigh.goodmanLine,
@@ -208,8 +200,10 @@ function buildResponse(
   };
 
   // Pre-compute worst scatter points for ALL components
-  const haighPointsByComponent: Record<StressComponent, ComponentHaighData> =
-    {} as Record<StressComponent, ComponentHaighData>;
+  const haighPointsByComponent: Record<StressComponent, ComponentHaighData> = {} as Record<
+    StressComponent,
+    ComponentHaighData
+  >;
 
   // VON points are already computed from firstHaigh
   haighPointsByComponent.VON = {
@@ -221,11 +215,7 @@ function buildResponse(
   for (const comp of ALL_COMPONENTS) {
     if (comp === 'VON') continue; // already done
 
-    const compHaigh = generateHaighDiagramData(
-      result.material,
-      result.safetyFactors[comp],
-      comp,
-    );
+    const compHaigh = generateHaighDiagramData(result.material, result.safetyFactors[comp], comp);
 
     haighPointsByComponent[comp] = {
       points: selectWorstPoints(compHaigh.points, MAX_SCATTER_POINTS),
@@ -234,9 +224,7 @@ function buildResponse(
   }
 
   // Build 3D visualization data if coordinates were available
-  const coordMap = coordinates
-    ? new Map(coordinates.map((c) => [c.nodeId, c]))
-    : null;
+  const coordMap = coordinates ? new Map(coordinates.map((c) => [c.nodeId, c])) : null;
 
   const visualization3D = coordMap
     ? buildVisualization3D(coordMap, result.safetyFactors, MAX_3D_POINTS)
